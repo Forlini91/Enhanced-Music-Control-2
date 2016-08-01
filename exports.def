@@ -1,0 +1,4 @@
+LIBRARY	"EnhancedMusicControl 2"
+EXPORTS
+OBSEPlugin_Query
+OBSEPlugin_Load
