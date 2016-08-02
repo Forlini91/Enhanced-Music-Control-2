@@ -178,7 +178,6 @@
       <Filter>Threads</Filter>
     </ClInclude>
     <ClInclude Include="PlayMusicFile.h" />
-    <ClInclude Include="PlayerData.h" />
     <ClInclude Include="MainGameVarsPointer.h">
       <Filter>StructsEnum</Filter>
     </ClInclude>

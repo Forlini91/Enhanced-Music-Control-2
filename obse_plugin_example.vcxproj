@@ -181,7 +181,6 @@ copy "$(TargetPath)" "C:\Bethesda Softworks\Nehrim\Data\OBSE\Plugins\$(TargetFil
     <ClInclude Include="Playlist.h" />
     <ClInclude Include="MusicType.h" />
     <ClInclude Include="OblivionINI.h" />
-    <ClInclude Include="PlayerData.h" />
     <ClInclude Include="PlayMusicFile.h" />
     <ClInclude Include="SafeWrite\SafeWrite.h" />
     <ClInclude Include="ThreadRequest.h" />
