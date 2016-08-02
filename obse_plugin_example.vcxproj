@@ -143,6 +143,7 @@ copy "$(TargetPath)" "C:\Bethesda Softworks\Nehrim\Data\OBSE\Plugins\$(TargetFil
     <ClCompile Include="PlayMusicFile.cpp" />
     <ClCompile Include="SafeWrite\SafeWrite.cpp" />
     <ClCompile Include="FilePath.cpp" />
+    <ClCompile Include="ThreadRequest.cpp" />
     <ClCompile Include="XShellPath\Path.cpp" />
   </ItemGroup>
   <ItemGroup>

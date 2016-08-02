@@ -26,3 +26,5 @@ string cleanPath (const string& path, bool relativize);
 string trim (const string& str);
 
 bool endsWith (const string& str, const string& ending);
+
+bool endsNotWith (const string& str, const string& ending);

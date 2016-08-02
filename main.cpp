@@ -50,6 +50,7 @@
 #include "MainGameVarsPointer.h"
 #include "MusicState.h"
 #include "Multiplier.h"
+#include "OblivionINI.h"
 #include "GlobalSettings.h"
 
 using namespace std;
@@ -134,6 +135,9 @@ string vanillaPlaylistNames[] = {
 
 bool printNewTrack = false;
 bool delayTitleMusicEnd = true;
+volatile bool* bMusicEnabled;
+volatile float* iniMasterVolume;
+volatile float* iniMusicVolume;
 int numPlaylists;
 int numMultipliers;
 
@@ -154,7 +158,7 @@ Playlist* addPlaylist (const string& name, const string& paths, bool randomOrder
 
 
 
-MusicType getAssignedMusicType (Playlist* playlist) {
+MusicType getAssignedMusicType (const Playlist* playlist) {
 	if (playlist == plExplore) {
 		return MusicType::Explore;
 	} else if (playlist == plPublic) {
@@ -172,7 +176,7 @@ MusicType getAssignedMusicType (Playlist* playlist) {
 	}
 }
 
-SpecialMusicType getAssignedSpecialMusicType (Playlist* playlist) {
+SpecialMusicType getAssignedSpecialMusicType (const Playlist* playlist) {
 	if (playlist == plSuccess) {
 		return SpecialMusicType::Success;
 	} else if (playlist == plDeath) {
@@ -250,6 +254,45 @@ void applyIniValues () {
 
 	_MESSAGE ("INI loaded");
 }
+
+
+
+void initialization () {
+	applyIniValues ();
+
+	_MESSAGE ("Initialization >> Oblivion.ini data");
+	bMusicEnabled = INI::Audio::bMusicEnabled;
+	iniMasterVolume = INI::Audio::fDefaultMasterVolume;
+	iniMusicVolume = INI::Audio::fDefaultMusicVolume;
+
+	_MESSAGE ("Initialization >> Playlists");
+	plDeath->addPath (obDeathPath"_*.mp3");
+	plDeath->addPath (obDeathPath"_*.wav");
+	plDeath->addPath (obDeathPath"_*.wma");
+	plSuccess->addPath (obSuccessPath"_*.mp3");
+	plSuccess->addPath (obSuccessPath"_*.wav");
+	plSuccess->addPath (obSuccessPath"_*.wma");
+	plTitle->addPath (obTitlePath"_*.mp3");
+	plTitle->addPath (obTitlePath"_*.wav");
+	plTitle->addPath (obTitlePath"_*.wma");
+
+	_MESSAGE ("Initialization >> Multipliers");
+	multipliersVanilla.emplace (BUILD_IN_PLACE (obMaster, &mainGameVars->gameVars->SoundRecords->fMasterVolume));
+	multipliersVanilla.emplace (BUILD_IN_PLACE (obMasterIni, INI::Audio::fDefaultMasterVolume));
+	multipliersVanilla.emplace (BUILD_IN_PLACE (obMusic, &mainGameVars->gameVars->SoundRecords->fMusicVolumeDup));
+	multipliersVanilla.emplace (BUILD_IN_PLACE (obMusicIni, INI::Audio::fDefaultMusicVolume));
+	multipliersVanilla.emplace (BUILD_IN_PLACE (obEffects, &mainGameVars->gameVars->SoundRecords->fEffectsVolume));
+	multipliersVanilla.emplace (BUILD_IN_PLACE (obEffectsIni, INI::Audio::fDefaultEffectsVolume));
+	multipliersVanilla.emplace (BUILD_IN_PLACE (obFoot, &mainGameVars->gameVars->SoundRecords->fFootVolume));
+	multipliersVanilla.emplace (BUILD_IN_PLACE (obFootIni, INI::Audio::fDefaultFootVolume));
+	multipliersVanilla.emplace (BUILD_IN_PLACE (obVoice, &mainGameVars->gameVars->SoundRecords->fVoiceVolume));
+	multipliersVanilla.emplace (BUILD_IN_PLACE (obVoiceIni, INI::Audio::fDefaultVoiceVolume));
+}
+
+
+
+
+
 
 
 
@@ -407,7 +450,7 @@ extern "C" {
 		void *obPlayQueuedMusicTrack = (void *)0x006AB420;
 		void *obGetIsInCombat = (void *)0x006605A0;
 
-		// register commands
+		//Register commands
 		//I was assigned the following opCode ranges:  0x24C0-0x24DF, 0x2840-0x284F
 		obse->SetOpcodeBase(0x24C0);
 		obse->RegisterCommand		(&kGetMusicTypeCommand);						//24C0
@@ -510,27 +553,16 @@ extern "C" {
 
 			_MESSAGE ("Create default playlists");
 			//MusicPathPointer *defaultMusicPaths = (MusicPathPointer *)0x00A76DC4;
-			//string explorePath = defaultMusicPaths->pathExploreMusic;
-			plExplore = addPlaylist (obExplore, obExplorePath"*.mp3|"obExplorePath"*.wav|"obExplorePath"*.wma", true, true);
-			plPublic = addPlaylist (obPublic, obPublicPath"*.mp3|"obPublicPath"*.wav|"obPublicPath"*.wma", true, true);
-			plDungeon = addPlaylist (obDungeon, obDungeonPath"*.mp3|"obDungeonPath"*.wav|"obDungeonPath"*.wma", true, true);
+			plExplore = addPlaylist (obExplore, obExplorePath"*", true, true);
+			plPublic = addPlaylist (obPublic, obPublicPath"*", true, true);
+			plDungeon = addPlaylist (obDungeon, obDungeonPath"*", true, true);
 			plCustom = plExplore;
-			plBattle = addPlaylist (obBattle, obBattlePath"*.mp3|"obBattlePath"*.wav|"obBattlePath"*.wma", true, true);
-			plDeath = addPlaylist (obDeath, obDeathPath".mp3|"obDeathPath".wav|"obDeathPath".wma", true, true);
-			plSuccess = addPlaylist (obSuccess, obSuccessPath".mp3|"obSuccessPath".wav|"obSuccessPath".wma", true, true);
-			plTitle = addPlaylist (obTitle, obTitlePath".mp3|"obTitlePath".wav|"obTitlePath".wma", true, true);
+			plBattle = addPlaylist (obBattle, obBattlePath"*", true, true);
+			plDeath = addPlaylist (obDeath, obDeathPath".mp3", true, true);
+			plSuccess = addPlaylist (obSuccess, obSuccessPath".mp3", true, true);
+			plTitle = addPlaylist (obTitle, obTitlePath".mp3", true, true);
 	
-			//Set the playlists to default.
-			/*curPlaylistNames[0] = obExplore;
-			curPlaylistNames[1] = obPublic;
-			curPlaylistNames[2] = obDungeon;
-			curPlaylistNames[3] = obExplore;
-			curPlaylistNames[4] = obBattle;
-			curPlaylistNames[5] = obDeath;
-			curPlaylistNames[6] = obSuccess;
-			curPlaylistNames[7] = obTitle;*/
-			
-			_beginthread(MainThread, 0, NULL);
+			_beginthread (MainThread, 0, NULL);
 		}
 		
 		return true;

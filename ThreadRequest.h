@@ -1,18 +1,33 @@
 #pragma once
 
+#include <string>
 #include "MusicType.h"
+#include "Playlist.h"
 
-struct ThreadRequest {
 
-	//Set to true to request SentryThread to advance the song by one.
+using namespace std;
+
+
+
+class ThreadRequest {
+
+public:
+
+	//This variable specifies the name of the list to swap it with.
+	Playlist* Request_Playlist;
+
+	//This variable specifies the name of the custom track to play.
+	string Request_Track;
+
+	//Set to true to request to play the next track.
 	bool Request_PlayNext = false;
 
-	bool Request_PlayCustom = false;
+	//Set to true to request to play a custom track.
+	bool Request_PlayCustomTrack = false;
 
-	//This variable will indicate to SentryThread which MusicType it
-	//should do this for.  It will only perform the advance if
-	//Request_PlayNext_MusicType == newType, UNLESS Request_PlayNext_MusicType
-	//is == MusicTypes::Undefined.
+	//This variable will indicate to which MusicType it should play next. 
+	//It will only perform the advance if
+	//Request_PlayNext_MusicType == newType, UNLESS Request_PlayNext_MusicType == MusicTypes::Undefined.
 	MusicType Request_PlayNext_MusicType = Mt_NotKnown;
 
 	//The following variables control the Playlist Swap system.
@@ -27,14 +42,16 @@ struct ThreadRequest {
 	float Request_Swap_FadeIn = -1;
 	float Request_Swap_FadeOut = -1;
 
-	//This variable specifies the name of the list to swap it with.
-	char Request_Swap_plName[512];
-
-	//This variable specifies the name of the custom track to play.
-	char Request_Track_Name[MAX_PATH];
-
 	//If set to true, the sentry thread will not attempt to resume
 	//the music player from a stopped state until it is cleared.
 	bool Request_HoldMusic;
+
+
+public:
+	void requestSetPlaylist (Playlist* playlist, MusicType musicType, int queueMode, float delay);
+
+	void requestPlayTrack (string& track);
+
+	bool hasRequestedCustomTrack ();
 
 };

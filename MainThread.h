@@ -9,8 +9,6 @@ using namespace std;
 
 bool isInRange (float val, float min, float max);
 
-void applyIniValues ();
-
 
 
 void MainThread_ResetStartBattleTimer ();
@@ -36,8 +34,6 @@ bool MainThread_FixLevelUp (bool PlayerIsPlaying);
 void MainThread_SelectCustomTrack ();
 
 void MainThread_RestorePreviousTrack ();
-
-bool MainThread_InitializeSpecialPlaylists ();
 
 void MainThread_SelectNewTrack (float fadeOut, float fadeIn);
 

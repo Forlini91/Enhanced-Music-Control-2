@@ -5,8 +5,7 @@
 
 struct ThreadState {
 
-	bool Initialized = false;
-
+	//The current playing playlist
 	Playlist* curPlaylist = NULL;
 
 	//The new musicType.
@@ -23,10 +22,6 @@ struct ThreadState {
 
 	//Last known special music type.
 	SpecialMusicType lastSpecial = Death;
-
-	//Have we played the title music yet?  If not, then don't play
-	//any other music until we have!
-	bool TitlePlayed = false;
 
 	//Load the game
 	bool loadFromTitle = false;

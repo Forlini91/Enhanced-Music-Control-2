@@ -51,9 +51,9 @@ extern int numPlaylists;
 extern int numMultipliers;
 
 
-extern MusicType getAssignedMusicType (Playlist* playlist);
-extern SpecialMusicType getAssignedSpecialMusicType (Playlist* playlist);
-string* getAssignedMusicTypeName (Playlist* playlist) {
+extern MusicType getAssignedMusicType (const Playlist* playlist);
+extern SpecialMusicType getAssignedSpecialMusicType (const Playlist* playlist);
+string* getAssignedMusicTypeName (const Playlist* playlist) {
 	MusicType musicType = getAssignedMusicType (playlist);
 	if (musicType == MusicType::Mt_NotKnown) {
 		return NULL;
@@ -268,9 +268,9 @@ bool Cmd_AddPathToPlaylist_Execute (COMMAND_ARGS) {
 			_MESSAGE ("Command >> emcAddPath >> Failed. \"%s\" is a vanilla playlist and can't be altered", plName);
 		} else if ((musicType = getAssignedMusicTypeName (playlist)) != NULL) {
 			if (CONSOLE) {
-				Console_Print ("Add path >> Failed. This playlist can't be altered, as it's assigned to music type %s", musicType->c_str ());
+				Console_Print ("Add path >> Failed. This playlist can't be altered, as it's assigned to a music type");
 			}
-			_MESSAGE ("Command >> emcAddPath >> Failed. \"%s\" can't be altered, as it's assigned to music type %s", plName, musicType->c_str ());
+			_MESSAGE ("Command >> emcAddPath >> Failed. \"%s\" can't be altered, as it's assigned to a music type ", plName);
 			*result = -1;
 		}
 			
@@ -359,60 +359,11 @@ bool Cmd_IsPlaylistActive_Execute (COMMAND_ARGS) {
 
 
 
-bool setPlaylist (Playlist* playlist, MusicType targetMT, int queueMode, float delay) {
-	Playlist** variable = varsMusicType.at (targetMT);
-	if (*variable == playlist) {
-		return false;
-	}
-
-	WaitForSingleObject (hThePlayerMutex, INFINITE);
-	float fadeOut = musicPlayer.getCurrentFadeOutLength ();
-	float fadeIn = musicPlayer.getCurrentFadeInLength ();
-	ReleaseMutex (hThePlayerMutex);
-
-	WaitForSingleObject (hMusicTypeMutex, INFINITE);
-	MusicType musicType = music.GetCurrentMusicType (false);
-	ReleaseMutex (hMusicTypeMutex);
-
-	WaitForSingleObject (hSentryRequestMutex, INFINITE);
-	if (musicType == targetMT) {
-		threadRequest.Request_Swap_FadeIn = fadeIn;
-		threadRequest.Request_Swap_FadeOut = fadeOut;
-		if (queueMode == 1) {
-			//QueueMode delays the update if music.GetCurrentMusicType == targetMT
-			//It will be updated next time the music player is in a stopped state.
-			threadRequest.Request_Swap_Type = targetMT;
-			const char* name = playlist->getName ().c_str ();
-			strcpy_s (threadRequest.Request_Swap_plName, 512, name);
-			threadRequest.Request_Swap_Delay = delay * 1000;
-			ReleaseMutex (hSentryRequestMutex);
-			//This prevents it from requesting a playlist advance.
-			return true;
-		}
-	}
-
-	//Immediately alter the playlist.
-	//First check to see if there is any swap requests waiting for this music type.
-	if (threadRequest.Request_Swap_Type == targetMT) { //Clear it.
-		threadRequest.Request_Swap_Type = MusicType::Mt_NotKnown;
-	}
-	if (queueMode < 2) {	//Now, request a song advance. SentryThread will carry it out if/when it can.
-		threadRequest.Request_PlayNext = true;
-		if (threadRequest.Request_PlayNext_MusicType > 4 || threadRequest.Request_PlayNext_MusicType != musicType) {
-			threadRequest.Request_PlayNext_MusicType = targetMT;
-		}
-	}
-//	curPlaylistNames[targetMT] = playlist->getName ();
-	*variable = playlist;
-	ReleaseMutex (hSentryRequestMutex);
-	return true;
-}
-
 bool Cmd_SetPlaylist_Execute (COMMAND_ARGS) {
 	*result = 0;
 
 	WaitForSingleObject (hThePlayerMutex, INFINITE);
-	bool isSwitching = !musicPlayer.isQueuable ();
+	bool isSwitching = musicPlayer.isSwitching ();
 	ReleaseMutex (hThePlayerMutex);
 	if (isSwitching) {
 		return true;
@@ -446,10 +397,16 @@ bool Cmd_SetPlaylist_Execute (COMMAND_ARGS) {
 	}
 
 	//Let other threads know the playlists are being manipulated.
+	bool succeed = false;
 	Playlist* playlist = &it->second;
-	WaitForSingleObject (hPlaylistMutex, INFINITE);
-	bool succeed = setPlaylist (playlist, targetMT, queueMode, delay);
-	ReleaseMutex (hPlaylistMutex);
+	Playlist** variable = varsMusicType.at (targetMT);
+	if (*variable != playlist) {
+		WaitForSingleObject (hPlaylistMutex, INFINITE);
+		threadRequest.requestSetPlaylist (playlist, targetMT, queueMode, delay);
+		ReleaseMutex (hPlaylistMutex);
+		*variable = playlist;
+		succeed = true;
+	}
 
 	if (succeed){
 		if (CONSOLE) {
@@ -490,7 +447,7 @@ bool Cmd_RestorePlaylist_Execute (COMMAND_ARGS) {
 	*result = 0;
 
 	WaitForSingleObject (hThePlayerMutex, INFINITE);
-	bool isSwitching = !musicPlayer.isQueuable ();
+	bool isSwitching = musicPlayer.isSwitching ();
 	ReleaseMutex (hThePlayerMutex);
 	if (isSwitching) {
 		return true;
@@ -562,7 +519,7 @@ bool Cmd_RestorePlaylist_Execute (COMMAND_ARGS) {
 //Returns a value indicating if the music can be manipulated.
 bool Cmd_IsMusicSwitching_Execute (COMMAND_ARGS) {
 	WaitForSingleObject (hThePlayerMutex, INFINITE);
-	*result = musicPlayer.isQueuable () ? 0 : 1;
+	*result = musicPlayer.isSwitching () ? 0 : 1;
 	ReleaseMutex (hThePlayerMutex);
 	if (CONSOLE) {
 		Console_Print ("Music switching >> %.0f", *result);
@@ -668,12 +625,12 @@ bool Cmd_GetPlaylistTracks_Execute (COMMAND_ARGS) {
 
 bool Cmd_GetTrackName_Execute (COMMAND_ARGS) {
 	WaitForSingleObject (hThePlayerMutex, INFINITE);
-	const char* songPath = musicPlayer.getSongPath ();
+	const string& songPath = musicPlayer.getTrack ();
 	ReleaseMutex (hThePlayerMutex);
 	if (CONSOLE) {
-		Console_Print ("Currently track >> %s", songPath);
+		Console_Print ("Currently track >> %s", songPath.c_str ());
 	}
-	g_stringIntfc->Assign (PASS_COMMAND_ARGS, songPath);
+	g_stringIntfc->Assign (PASS_COMMAND_ARGS, songPath.c_str ());
 	return true;
 }
 
@@ -697,7 +654,7 @@ bool Cmd_GetTrackDuration_Execute (COMMAND_ARGS) {
 
 bool Cmd_GetTrackPosition_Execute (COMMAND_ARGS) {
 	WaitForSingleObject (hThePlayerMutex, INFINITE);
-	*result = musicPlayer.getSongPosition () / ((double)10000000L);
+	*result = musicPlayer.getTrackPosition () / ((double)10000000L);
 	double duration = musicPlayer.getTrackDuration () / ((double)10000000L);
 	ReleaseMutex (hThePlayerMutex);
 	if (CONSOLE) {
@@ -719,13 +676,13 @@ bool Cmd_SetTrackPosition_Execute (COMMAND_ARGS) {
 		return true;
 	}
 
-	LONGLONG longPos = ((LONGLONG)1000 * position) * 10000;		//*1000, promote to LONGLONG, then * 1000.
+	REFERENCE_TIME longPos = position * ONCE_SECOND;
 	WaitForSingleObject (hThePlayerMutex, INFINITE);
-	LONGLONG longDur = musicPlayer.getTrackDuration ();
+	REFERENCE_TIME longDur = musicPlayer.getTrackDuration ();
 	if (longPos > longDur) {
 		longPos = longDur;
 	}
-	musicPlayer.setPosition (fadeTimeOut, fadeTimeIn, longPos);
+	musicPlayer.setTrackPosition (fadeTimeOut, fadeTimeIn, longPos);
 	ReleaseMutex (hThePlayerMutex);
 	if (CONSOLE) {
 		Console_Print ("Set track position >> Position %.2f, Fade out/in: %f/%f", position, fadeTimeOut, fadeTimeIn);
@@ -1345,7 +1302,7 @@ bool Cmd_GetPauseTime_Execute (COMMAND_ARGS) {
 	}
 	WaitForSingleObject (hThePlayerMutex, INFINITE);
 	switch (extraPause) {
-		case 2: *result = (musicPlayer.getFinalPauseTime(false) / 1000); break;
+		case 2: *result = (musicPlayer.getCalculatedPauseTime() / 1000); break;
 		case 1: *result = (musicPlayer.getExtraPauseTime () / 1000); break;
 		default: *result = (musicPlayer.getMinPauseTime () / 1000);
 	}
@@ -1379,7 +1336,7 @@ bool Cmd_SetPauseTime_Execute (COMMAND_ARGS) {
 	bool changed1 = musicPlayer.setMinPauseTime (pauseTime * 1000);
 	bool changed2 = musicPlayer.setExtraPauseTime (extraPauseTime * 1000);
 	if (changed1 || changed2 || forceUpdate != 0) {
-		musicPlayer.getFinalPauseTime (true);
+		musicPlayer.recalculatePauseTime();
 		_MESSAGE ("Command >> emcSetPauseTime >> Min pause: %f, Extra pause: %f", pauseTime, extraPauseTime);
 		*result = 1;
 	}
@@ -1402,7 +1359,7 @@ bool Cmd_GetBattleDelay_Execute (COMMAND_ARGS) {
 	}
 	WaitForSingleObject (hThePlayerMutex, INFINITE);
 	switch (extraBattleDelay) {
-		case 2:	*result = (musicPlayer.getFinalBattleDelay (false) / 1000); break;
+		case 2:	*result = (musicPlayer.getCalculatedBattleDelay () / 1000); break;
 		case 1: *result = (musicPlayer.getExtraBattleDelay () / 1000); break;
 		default: *result = (musicPlayer.getMinBattleDelay () / 1000);
 	}
@@ -1436,7 +1393,7 @@ bool Cmd_SetBattleDelay_Execute (COMMAND_ARGS) {
 	bool changed1 = musicPlayer.setMinBattleDelay (battleDelay * 1000);
 	bool changed2 = musicPlayer.setExtraBattleDelay (extraBattleDelay * 1000);
 	if (changed1 || changed2 || forceUpdate != 0) {
-		musicPlayer.getFinalBattleDelay (true);
+		musicPlayer.recalculateBattleDelay ();
 		_MESSAGE ("Command >> emcSetBattleDelay >> Min delay: %f, Extra delay: %f", battleDelay, extraBattleDelay);
 		*result = 1;
 	}
@@ -1459,7 +1416,7 @@ bool Cmd_GetAfterBattleDelay_Execute (COMMAND_ARGS) {
 	}
 	WaitForSingleObject (hThePlayerMutex, INFINITE);
 	switch (extraAfterBattleDelay) {
-		case 2:	*result = (musicPlayer.getFinalAfterBattleDelay (false) / 1000); break;
+		case 2:	*result = (musicPlayer.getCalculatedAfterBattleDelay () / 1000); break;
 		case 1: *result = (musicPlayer.getExtraAfterBattleDelay () / 1000); break;
 		default: *result = (musicPlayer.getMinAfterBattleDelay () / 1000);
 	}
@@ -1493,7 +1450,7 @@ bool Cmd_SetAfterBattleDelay_Execute (COMMAND_ARGS) {
 	bool changed1 = musicPlayer.setMinAfterBattleDelay (afterBattleDelay * 1000);
 	bool changed2 = musicPlayer.setExtraAfterBattleDelay (extraAfterBattleDelay * 1000);
 	if (changed1 || changed2 || forceUpdate != 0) {
-		musicPlayer.getFinalAfterBattleDelay (true);
+		musicPlayer.recalculateAfterBattleDelay ();
 		_MESSAGE ("Command >> emcSetAfterBattleDelay >> Min delay: %f, Extra delay: %f", afterBattleDelay, extraAfterBattleDelay);
 		*result = 1;
 	}
@@ -1597,21 +1554,24 @@ bool Cmd_MusicStop_Execute (COMMAND_ARGS) {
 	ReleaseMutex (hSentryRequestMutex);
 
 	WaitForSingleObject (hThePlayerMutex, INFINITE);
-	if (musicPlayer.isPlaying ()) {
-		if (fadeOut < 0) {
-			fadeOut = musicPlayer.getCurrentFadeOutLength () / 1000;
+	if (musicPlayer.isInitialized ()) {
+		if (musicPlayer.isStopped ()) {
+			if (CONSOLE) {
+				Console_Print ("Stop music >> Already stopped");
+			}
+			_MESSAGE ("Command >> emcMusicStop >> Already stopped");
+		} else {
+			if (fadeOut < 0) {
+				fadeOut = musicPlayer.getCurrentFadeOutLength ();
+			}
+			musicPlayer.stop (fadeOut);
+			fadeOut /= 100;
+			if (CONSOLE) {
+				Console_Print ("Stop music >> Fade Out: %f", fadeOut);
+			}
+			_MESSAGE ("Command >> emcMusicStop >> Fade Out: %f", fadeOut);
+			*result = 1;
 		}
-		musicPlayer.stop (fadeOut * 1000);
-		if (CONSOLE) {
-			Console_Print ("Stop music >> Fade Out: %f", fadeOut);
-		}
-		_MESSAGE ("Command >> emcMusicStop >> Fade Out: %f", fadeOut);
-		*result = 1;
-	} else {
-		if (CONSOLE) {
-			Console_Print ("Stop music >> Already stopped");
-		}
-		_MESSAGE ("Command >> emcMusicStop >> Already stopped");
 	}
 	ReleaseMutex (hThePlayerMutex);
 	return true;
@@ -1629,21 +1589,24 @@ bool Cmd_MusicPause_Execute (COMMAND_ARGS) {
 	}
 
 	WaitForSingleObject (hThePlayerMutex, INFINITE);
-	if (!musicPlayer.isPaused ()) {
-		if (fadeOut < 0) {
-			fadeOut = musicPlayer.getCurrentFadeOutLength () / 1000;
+	if (musicPlayer.isInitialized ()) {
+		if (musicPlayer.isPaused ()) {
+			if (CONSOLE) {
+				Console_Print ("Pause music >> Already paused");
+			}
+			_MESSAGE ("Command >> emcMusicPause >> Already paused");
+		} else {
+			if (fadeOut < 0) {
+				fadeOut = musicPlayer.getCurrentFadeOutLength ();
+			}
+			musicPlayer.pause (fadeOut);
+			fadeOut /= 1000;
+			if (CONSOLE) {
+				Console_Print ("Pause music >> Fade Out: %f", fadeOut);
+			}
+			_MESSAGE ("Command >> emcMusicPause >> Fade Out: %f", fadeOut);
+			*result = 1;
 		}
-		musicPlayer.pause (fadeOut * 1000);
-		if (CONSOLE) {
-			Console_Print ("Pause music >> Fade Out: %f", fadeOut);
-		}
-		_MESSAGE ("Command >> emcMusicPause >> Fade Out: %f", fadeOut);
-		*result = 1;
-	} else {
-		if (CONSOLE) {
-			Console_Print ("Pause music >> Already paused");
-		}
-		_MESSAGE ("Command >> emcMusicPause >> Already paused");
 	}
 	ReleaseMutex (hThePlayerMutex);
 	return true;
@@ -1661,21 +1624,24 @@ bool Cmd_MusicResume_Execute (COMMAND_ARGS) {
 	}
 
 	WaitForSingleObject (hThePlayerMutex, INFINITE);
-	if (musicPlayer.isPaused ()) {
-		if (fadeIn < 0) {
-			fadeIn = musicPlayer.getCurrentFadeInLength () / 1000;
+	if (musicPlayer.isInitialized ()) {
+		if (musicPlayer.isPaused ()) {
+			if (fadeIn < 0) {
+				fadeIn = musicPlayer.getCurrentFadeInLength ();
+			}
+			musicPlayer.resume (fadeIn);
+			fadeIn /= 1000;
+			if (CONSOLE) {
+				Console_Print ("Resume music >> Fade In: %f", fadeIn);
+			}
+			_MESSAGE ("Command >> emcMusicResume >> Fade In: %f", fadeIn);
+			*result = 1;
+		} else {
+			if (CONSOLE) {
+				Console_Print ("Resume music >> It's not paused");
+			}
+			_MESSAGE ("Command >> emcMusicResume >> It's not paused");
 		}
-		musicPlayer.resume (fadeIn * 1000);
-		if (CONSOLE) {
-			Console_Print ("Resume music >> Fade In: %f", fadeIn);
-		}
-		_MESSAGE ("Command >> emcMusicResume >> Fade In: %f", fadeIn);
-		*result = 1;
-	} else {
-		if (CONSOLE) {
-			Console_Print ("Resume music >> It's not paused");
-		}
-		_MESSAGE ("Command >> emcMusicResume >> It's not paused");
 	}
 	ReleaseMutex (hThePlayerMutex);
 	return true;
@@ -1694,21 +1660,23 @@ bool Cmd_MusicRestart_Execute (COMMAND_ARGS) {
 	}
 
 	WaitForSingleObject (hThePlayerMutex, INFINITE);
-	*result = musicPlayer.isPlaying ();
-	if (fadeOut < 0) {
-		fadeOut = musicPlayer.getCurrentFadeOutLength () / 1000;
+	if (musicPlayer.isInitialized ()) {
+		*result = musicPlayer.isStopped () ? 1 : 0;
+		if (fadeOut < 0) {
+			fadeOut = musicPlayer.getCurrentFadeOutLength ();
+		}
+		if (fadeIn < 0) {
+			fadeIn = musicPlayer.getCurrentFadeInLength ();
+		}
+		musicPlayer.restart (fadeOut, fadeIn);
+		fadeOut /= 1000;
+		fadeIn /= 1000;
+		if (CONSOLE) {
+			Console_Print ("Restart music >> Fade Out: %f | Fade In: %f", fadeOut, fadeIn);
+		}
+		_MESSAGE ("Command >> emcMusicRestart >> Fade Out %f | Fade In: %f", fadeOut, fadeIn);
 	}
-	if (fadeIn < 0) {
-		fadeIn = musicPlayer.getCurrentFadeInLength () / 1000;
-	}
-	musicPlayer.restart (fadeOut * 1000, fadeIn * 1000);
 	ReleaseMutex (hThePlayerMutex);
-
-	if (CONSOLE) {
-		Console_Print ("Restart music >> Fade Out/In: %f/%f", fadeOut, fadeIn);
-	}
-	_MESSAGE ("Command >> emcMusicRestart >> Fade Out/In: %f/%f", fadeOut, fadeIn);
-	*result = 1;
 	return true;
 }
 

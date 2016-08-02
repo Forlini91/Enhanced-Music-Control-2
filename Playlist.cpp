@@ -211,6 +211,16 @@ bool Playlist::buildPath (const string& path) {
 	//This will make the path absolute in relation to Oblivion's main directory only if the path is currently relative, else it does nothing to the path.
 	string filePathC = cleanPath (path, true);
 	const char *charPath = filePathC.c_str ();
+
+	if (isDirectory (filePathC)) {
+		if (filePathC.back () != '\\') {
+			filePathC += "\*";
+			charPath = filePathC.c_str ();
+		} else {
+			filePathC.push_back ('*');
+			charPath = filePathC.c_str ();
+		}
+	}
 	
 	if (strchr (charPath, '*') || strchr (charPath, '?')) {
 		WIN32_FIND_DATAA FindFileData;
@@ -226,7 +236,7 @@ bool Playlist::buildPath (const string& path) {
 			//This will prevent ".." from being seen as a file.
 			if (fileName == ".." || (FindFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY) {
 				continue;
-			} else if (!(endsWith (fileName, ".mp3") || endsWith (fileName, ".wav") || endsWith (fileName, ".wma"))) {
+			} else if (endsNotWith (fileName, ".mp3") && endsNotWith (fileName, ".wav") && endsNotWith (fileName, ".wma")) {
 				continue;
 			}
 			
@@ -240,7 +250,7 @@ bool Playlist::buildPath (const string& path) {
 			paths.push_back (filePathC);
 			return true;
 		}
-	} else if (exists (charPath) && isDirectory(charPath)) {
+	} else if (exists (charPath)) {
 		paths.push_back (filePathC);
 		tracks.push_back (filePathC);
 		return true;

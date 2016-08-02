@@ -1,7 +1,9 @@
 #pragma once
 
-struct MusicFile {
-	char MusicPath[MAX_PATH];
-};
+#include <string>
+
+using namespace std;
 
 bool playMusicFile (char* path);
+
+bool playMusicFile (string path);

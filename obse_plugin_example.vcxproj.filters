@@ -90,6 +90,9 @@
     <ClCompile Include="MusicPlayer.cpp" />
     <ClCompile Include="Multiplier.cpp" />
     <ClCompile Include="FilePath.cpp" />
+    <ClCompile Include="ThreadRequest.cpp">
+      <Filter>Threads</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\obse\obse\GameAPI.h">

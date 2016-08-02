@@ -1,0 +1,106 @@
+//Given the following parameters, returns the current MusicType.
+//3 push params, set all to 0h.
+//ECX holds a parameter
+//	For interiors:  (*0x00B333A0) + 34h
+//	For exteriors:  Call obGMTGetParam.
+//EAX holds return value
+//EDX can be altered
+//Unaffected registers:  EBX, EBP, ESI, EDI
+//Stack must be restored, ESP + 8h
+void *obGetMusicType = (void *)0x004CAD05;		//0x004CAD00
+//Gets the parameter for obGetMusicType.  Only needed
+//for exterior cells and worldspaces.
+//2 push params (Here in C-Style Order, push reversed)
+//	1st param == (*0x00B333A0) + 20h
+//	2nd param == (*0x00B333A0) + 24h
+//ECX holds a parameter == *((*0x00B333A0) + 74h)
+//EAX holds return value
+//Unaffected registers:  EBX, ESI, EDI
+//Does not affect stack when called.
+void *obGMTGetParam = (void *)0x004EFE80;
+
+unsigned int RetAddr = (unsigned int)0x00000000;
+
+static _declspec(naked) void GetMusicType(void)
+{
+	//Calls obGetMusicType and stores the result into currentMusicType.
+	//Probably needs alot of optimization, but its my first assembly ever.
+	//All those pushes are to ensure none of the registers are affected upon return.
+	_asm
+	{
+		//Back up all values.
+		push eax
+		push ebx
+		push ecx
+		push edx
+		push esi
+		push edi
+		push ebp
+		//First, get obGetMusicType's ECX parameter.
+		//For interiors, its quite simple, but exteriors are different.
+		//For exteriors, ee do this by calling obGMTGetParam and setting
+		//it's result (in EAX) to ECX.
+		mov ecx, dword ptr ds:[00B333A0h]
+		test ecx, ecx					//Test to see if ECX == 0
+		jz AbortA						//If it is, abort.  It must have a value.
+		//Test if interior...
+		mov eax, dword ptr ds:[ecx+34h]
+		test eax, eax
+		jnz Interior					//Jump if we're loading an interior.
+		push [ecx+24h]					//obGMTGetParam: Param 2
+		push [ecx+20h]					//obGMTGetParam: Param 1
+		mov ecx, dword ptr [ecx+74h]	//Else, we need to go fishing for the right parameter.
+		test ecx, ecx					//If the data we need isn't here (as is the case with fast traveling)
+		jz AbortB						//Abort!
+		//push 11h						//obGMTGetParam: Param 2
+		//push 8h 						//obGMTGetParam: Param 1
+		call obGMTGetParam				//This function will get the parameter we need.
+		test eax, eax					//Sometimes this function can fail.
+		//jnz GetReady					//If it didn't, go to it.
+		//Try different method:
+		//push [ecx+24h]					//obGMTGetParam: Param 2
+		//push [ecx+20h]					//obGMTGetParam: Param 1
+		//call obGMTGetParam				//This function will get the parameter we need.
+		//test eax, eax					//Sometimes this function can fail.
+		jz AbortA						//If it does, abort!
+	GetReady:
+		mov ecx, eax					//Result into ECX.
+		jmp LetsDoThis					//Lets go!
+	Interior:
+		mov ecx, dword ptr [ecx+34h]	//This is all we need for an interior.
+	LetsDoThis:
+		push 00h						//obGetMusicType: Param 3
+		push 00h						//obGetMusicType: Param 2
+		push 00h						//obGetMusicType: Param 1
+		call obGetMusicType				//Getting the Music Type...
+		mov currentMusicType, eax		//Placing the Music Type into out current MusicType variable.
+		//Restore all values.
+	AbortB:								//Occurs after obGMTGetParam 2 parameters are pushed, and need to be undone, or fall through from obGetMusicType.
+		add esp, 08h					//Restore the stack by shifting it 2 DWORDs.
+	AbortA:								//Occurs before obGMTGetParam 2 parameters are pushed. 
+		pop ebp
+		pop edi
+		pop esi
+		pop edx
+		pop ecx
+		pop ebx
+		pop eax
+		retn
+	}
+}
+
+_declspec(naked) void GetMusicType(void)
+{
+	_asm
+	{
+		pop RetAddr						//Save the return address into my variable.
+		push Comeback					//Set the return address to the label Comeback.
+		sub esp, 0Ch					//The first real line in obGetMusicType.
+		jmp obGetMusicType				//Jump to obGetMusicType (don't call), we also advance by
+										//05h to prevent an infinite loop that would occur.
+	Comeback:
+		mov currentMusicType, eax		//Move the returned value into my variable.
+		push RetAddr					//Stick the return address back in.
+		retn							//Return.
+	}
+}

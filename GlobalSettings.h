@@ -48,6 +48,7 @@
 #define obFoot "obFoot"
 #define obFootIni "obFootIni"
 
+
 #define CONSOLE IsConsoleOpen () && IsConsoleMode ()
 
 #define BUILD_IN_PLACE(key, ...) piecewise_construct, forward_as_tuple(key), forward_as_tuple(__VA_ARGS__) 

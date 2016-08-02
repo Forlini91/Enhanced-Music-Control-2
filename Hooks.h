@@ -5,6 +5,7 @@
 #include <time.h>
 #include "MusicState.h"
 #include "PlayMusicFile.h"
+#include "GlobalSettings.h"
 
 
 extern HANDLE hMusicTypeMutex;
@@ -310,10 +311,10 @@ _declspec(naked) void StreamMusicType (void) {
 
 	_MESSAGE ("Command >> StreamMusic >> Music type: %d", *streamSelectedType);
 	switch (*streamSelectedType) {
-		case 0: playMusicFile ("Data/Music/Explore/*"); break;
-		case 1: playMusicFile ("Data/Music/Public/*"); break;
-		case 2: playMusicFile ("Data/Music/Dungeon/*"); break;
-		case 4: playMusicFile ("Data/Music/Battle/*"); break;
+		case 0: playMusicFile (obExplorePath"*"); break;
+		case 1: playMusicFile (obPublicPath"*"); break;
+		case 2: playMusicFile (obDungeonPath"*"); break;
+		case 4: playMusicFile (obBattlePath"*"); break;
 	}
 
 	_asm {
@@ -336,20 +337,20 @@ _declspec(naked) void StreamMusicFile (void) {
 	}
 	_MESSAGE ("Command >> StreamMusic >> %s", streamSelectedText);
 	if (_stricmp (streamSelectedText, "explore") == 0) {
-		playMusicFile ("Data/Music/Explore/*");
+		playMusicFile (obExplorePath"*");
 	} else if (_stricmp (streamSelectedText, "public") == 0) {
-		playMusicFile ("Data/Music/Public/*");
+		playMusicFile (obPublicPath"*");
 	} else if (_stricmp (streamSelectedText, "dungeon") == 0) {
-		playMusicFile ("Data/Music/Dungeon/*");
+		playMusicFile (obDungeonPath"*");
 	} else if (_stricmp (streamSelectedText, "battle") == 0) {
-		playMusicFile ("Data/Music/Battle/*");
+		playMusicFile (obBattlePath"*");
 	} else if (_stricmp (streamSelectedText, "random") == 0) {
 		srand ((unsigned)time (NULL));
 		switch (rand () % 4) {
-			case 0: playMusicFile ("Data/Music/Explore/*"); break;
-			case 1: playMusicFile ("Data/Music/Public/*"); break;
-			case 2: playMusicFile ("Data/Music/Dungeon/*"); break;
-			case 3: playMusicFile ("Data/Music/Battle/*"); break;
+			case 0: playMusicFile (obExplorePath"*"); break;
+			case 1: playMusicFile (obPublicPath"*"); break;
+			case 2: playMusicFile (obDungeonPath"*"); break;
+			case 3: playMusicFile (obBattlePath"*"); break;
 		}
 	} else {
 		playMusicFile (streamSelectedText);

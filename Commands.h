@@ -54,7 +54,7 @@ bool Cmd_CreatePlaylist_Execute (COMMAND_ARGS);
 static ParamInfo kParams_CreatePlaylist[3] = {
 	{"playlist name", kParamType_String, 0},
 	{"music path(s)", kParamType_String, 0},
-	{"random order", kParamType_Integer, 1}
+	{"random order", kParamType_Integer, 1},
 };
 static CommandInfo kCreatePlaylistCommand = {
 	"emcCreatePlaylist",

@@ -67,3 +67,13 @@ bool endsWith (const string& str, const string& ending) {
 		return false;
 	}
 }
+
+bool endsNotWith (const string& str, const string& ending) {
+	int strLen = str.length ();
+	int endLen = ending.length ();
+	if (strLen >= endLen) {
+		return str.compare (strLen - endLen, endLen, ending) != 0;
+	} else {
+		return true;
+	}
+}
