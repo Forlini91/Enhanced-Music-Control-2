@@ -1,12 +1,13 @@
 #pragma once
 
 #include "MusicType.h"
-#include "Playlist.h"
+#include "ActivePlaylist.h"
+
 
 struct ThreadState {
 
 	//The current playing playlist
-	Playlist* curPlaylist = NULL;
+	ActivePlaylist* activePlaylist = NULL;
 
 	//The new musicType.
 	MusicType newType;
@@ -23,27 +24,12 @@ struct ThreadState {
 	//Last known special music type.
 	SpecialMusicType lastSpecial = Death;
 
-	//Load the game
-	bool loadFromTitle = false;
 
-	//Indicates that the player should not play again until
-	//a change.  That means even if the Sentry Thread sees that
-	//ThePlayer is no longer playing, it won't tell it to play
-	//something else.  This is used for the Death special type.
-	bool HoldUntilMTChange = false;
 
-	//This, clumsily, fixes the problems I've had with the success
-	//music.  Now it will play through once, and SHOULD go back to
-	//the previously playing music, but I'm not certain how well
-	//it will work.  I need to hook the event that occurs when
-	//the 'Exit' button on the Level Up menu is pressed.
-	bool SuccessMusicFix = false;
-
-	//The last song played.  When the music type changes
-	//the currently playing song will be stored here before
-	//a new one is queued up.  This will allow us to resume
-	//the song later if we need to.
-	char lastPlayedSong[MAX_PATH];
+	//The last song played.
+	//When the music type changes the currently playing song will be stored here before a new one is queued up.
+	//This will allow us to resume the song later if we need to.
+	const char* lastPlayedSong;
 
 	//The position of the song when it was stopped.
 	long lastPlayedPosition = 0;
@@ -51,6 +37,20 @@ struct ThreadState {
 	//True if lastPlayedSong was set before (and therefore safe to use).
 	bool lastPlayedSet = false;
 
+
+
+	//Load the game
+	bool loadFromTitle = false;
+
+	//Indicates that the player should not play again until a change.
+	//That means even if the Sentry Thread sees that ThePlayer is no longer playing, it won't tell it to play something else.
+	//This is used for the Death special type.
+	bool HoldUntilMTChange = false;
+
+	//This, clumsily, fixes the problems I've had with the success music
+	//Now it will play through once, and SHOULD go back to the previously playing music, but I'm not certain how well it will work
+	//I need to hook the event that occurs when the 'Exit' button on the Level Up menu is pressed.
+	bool SuccessMusicFix = false;
 
 	//This is the timer.  While the timer is below restorePeriod, this will
 	//be incrimented by the amount in SleepTime.  If the musictype changes
@@ -74,3 +74,7 @@ struct ThreadState {
 	bool noTrack;
 
 };
+
+
+
+extern ThreadState threadState;

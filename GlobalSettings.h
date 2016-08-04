@@ -1,54 +1,29 @@
 #pragma once
 
-//This setting define the path of the ini
-#define INI_PATH "Data\\OBSE\\Plugins\\EnhancedMusicControl 2.ini"
+#define arraySize(arr,type) sizeof(arr)/sizeof(type)
 
-//This is the very lowest volume that can be used in DShow.
-//Setting the volume to this effectively mutes the playing track.
-#define ABSOLUTE_MINIMUM_VOLUME -10000
+#define LockHandle(mutex) WaitForSingleObject(mutex,INFINITE)
 
+#define UnlockHandle(mutex) ReleaseMutex(mutex)
 
-//But below -4000, you can't really hear the audio anyways.
-//So, this is the effective minimum, and is what is used
-//during fades.
-#define EFFECTIVE_MINIMUM_VOLUME -4000
+#define LockMulti(handleSet, ...) HANDLE handleSet[] = {__VA_ARGS__};\
+WaitForMultipleObjects (arraySize(handleSet,HANDLE), handleSet, 1, INFINITE);
 
+#define UnlockMulti(handleSet) for (HANDLE mutex : handleSet) ReleaseMutex(mutex);
 
-//There is only one maximum.  It would be funny if they made it '11'.
-#define MAXIMUM_VOLUME 0
+#define isBetween(val,min,max) (min <= val && val <= max)
 
 
 
+//Quick code
 
-#define obExplore "obExplore"
-#define obPublic "obPublic"
-#define obDungeon "obDungeon"
-#define obCustom "obExplore"
-#define obBattle "obBattle"
-#define obDeath "obDeath"
-#define obSuccess "obSuccess"
-#define obTitle "obTitle"
-
-#define obExplorePath "Data\\Music\\Explore\\"
-#define obPublicPath "Data\\Music\\Public\\"
-#define obDungeonPath "Data\\Music\\Dungeon\\"
-#define obBattlePath "Data\\Music\\Battle\\"
-#define obDeathPath "Data\\Music\\Special\\death"
-#define obSuccessPath "Data\\Music\\Special\\success"
-#define obTitlePath "Data\\Music\\Special\\tes4title"
-
-#define obMaster "obMaster"
-#define obMasterIni "obMasterIni"
-#define obMusic "obMusic"
-#define obMusicIni "obMusicIni"
-#define obVoice "obVoice"
-#define obVoiceIni "obVoiceIni"
-#define obEffects "obEffects"
-#define obEffectsIni "obEffectsIni"
-#define obFoot "obFoot"
-#define obFootIni "obFootIni"
-
-
-#define CONSOLE IsConsoleOpen () && IsConsoleMode ()
-
-#define BUILD_IN_PLACE(key, ...) piecewise_construct, forward_as_tuple(key), forward_as_tuple(__VA_ARGS__) 
+//Believe me or not... this condition means either
+//(***)		l1 < v < l2   OR   l1 < v < l2
+//Why?
+//Let's take A and B, which are respectily (l1-v) and (l2-v). A is positive if l1>v and B is positive if l2>v
+//We want one of the above situations (*** above), but when is v between l1 and l2?
+//Answer: exactly when one is positive and the other is negative
+//Example: A<0 and B>0 (so, l1<v && v<l2) or A>0 and B<0 (so, l2<v && v<l2). But... how to check this? 
+//Answer: "A*B<0". The result of multiplication is negative only if one is positive and the other is negative
+//NOTE: the parameter comp should be < or <= depending if you want v in range (l1,l2) or [l1,l2]
+#define isBetweenLimits(l1,v,l2,comp) ((l1-v)*(l2-v) comp 0)

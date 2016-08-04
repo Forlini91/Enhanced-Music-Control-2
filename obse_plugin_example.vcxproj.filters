@@ -7,9 +7,6 @@
     <Filter Include="SafeWrite">
       <UniqueIdentifier>{a5b6e3b3-49b8-405b-a13d-04d3ac2c6b8e}</UniqueIdentifier>
     </Filter>
-    <Filter Include="XShellPath">
-      <UniqueIdentifier>{cdf3fe6b-81c1-4b00-bb75-27ebdad9133f}</UniqueIdentifier>
-    </Filter>
     <Filter Include="INI">
       <UniqueIdentifier>{d620164a-d639-4800-880b-ca39978553b7}</UniqueIdentifier>
     </Filter>
@@ -60,9 +57,6 @@
     <ClCompile Include="SafeWrite\SafeWrite.cpp">
       <Filter>SafeWrite</Filter>
     </ClCompile>
-    <ClCompile Include="XShellPath\Path.cpp">
-      <Filter>XShellPath</Filter>
-    </ClCompile>
     <ClCompile Include="dllmain.c" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="..\obse\obse\Script.cpp">
@@ -92,6 +86,14 @@
     <ClCompile Include="FilePath.cpp" />
     <ClCompile Include="ThreadRequest.cpp">
       <Filter>Threads</Filter>
+    </ClCompile>
+    <ClCompile Include="ActivePlaylist.cpp">
+      <Filter>StructsEnum</Filter>
+    </ClCompile>
+    <ClCompile Include="EMC2INISettings.cpp" />
+    <ClCompile Include="ThreadState.cpp" />
+    <ClCompile Include="MainGameVarsPointer.cpp">
+      <Filter>StructsEnum</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -139,9 +141,6 @@
     </ClInclude>
     <ClInclude Include="SafeWrite\SafeWrite.h">
       <Filter>SafeWrite</Filter>
-    </ClInclude>
-    <ClInclude Include="XShellPath\Path.h">
-      <Filter>XShellPath</Filter>
     </ClInclude>
     <ClInclude Include="..\obse\obse\GameBSExtraData.h">
       <Filter>obse</Filter>
@@ -191,9 +190,6 @@
       <Filter>StructsEnum</Filter>
     </ClInclude>
     <ClInclude Include="Playlist.h" />
-    <ClInclude Include="MusicPathPointer.h">
-      <Filter>StructsEnum</Filter>
-    </ClInclude>
     <ClInclude Include="EMC2INISettings.h">
       <Filter>INI</Filter>
     </ClInclude>
@@ -202,6 +198,12 @@
     </ClInclude>
     <ClInclude Include="Multiplier.h" />
     <ClInclude Include="FilePath.h" />
+    <ClInclude Include="ActivePlaylist.h">
+      <Filter>StructsEnum</Filter>
+    </ClInclude>
+    <ClInclude Include="VanillaPlaylistData.h">
+      <Filter>StructsEnum</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\obse\obse\GameRTTI_1_1.inl">

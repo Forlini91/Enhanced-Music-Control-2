@@ -1,15 +1,12 @@
 #pragma once
 
 
-
 #include <time.h>
+#include "GlobalSettings.h"
 #include "MusicState.h"
 #include "PlayMusicFile.h"
-#include "GlobalSettings.h"
 
 
-extern HANDLE hMusicTypeMutex;
-extern MusicState music;
 
 int* streamSelectedType = new int (0);
 char* streamSelectedText = new char[200];
@@ -32,7 +29,7 @@ _declspec(naked) void QueueMusicTrack (void) {
 			push ecx
 			push edx
 	}
-	WaitForSingleObject (hMusicTypeMutex, INFINITE);
+	LockHandle (hMusicStateMutex);
 	_asm {
 		pop edx
 			pop ecx
@@ -74,7 +71,7 @@ _declspec(naked) void QueueMusicTrack (void) {
 			push ecx
 			push edx
 	}
-	ReleaseMutex (hMusicTypeMutex);
+	UnlockHandle (hMusicStateMutex);
 	_asm {
 		pop edx
 			pop ecx
@@ -102,7 +99,7 @@ _declspec(naked) void DetectTitleMusic (void) {
 			push ecx
 			push edx
 	}
-	WaitForSingleObject (hMusicTypeMutex, INFINITE);
+	LockHandle (hMusicStateMutex);
 	_asm {
 		pop edx
 			pop ecx
@@ -119,7 +116,7 @@ _declspec(naked) void DetectTitleMusic (void) {
 			push ecx
 			push edx
 	}
-	ReleaseMutex (hMusicTypeMutex);
+	UnlockHandle (hMusicStateMutex);
 	_asm {
 		pop edx
 			pop ecx
@@ -138,7 +135,7 @@ _declspec(naked) void DetectSuccessMusic (void) {
 			push ecx
 			push edx
 	}
-	WaitForSingleObject (hMusicTypeMutex, INFINITE);
+	LockHandle (hMusicStateMutex);
 	_asm {
 		pop edx
 			pop ecx
@@ -153,7 +150,7 @@ _declspec(naked) void DetectSuccessMusic (void) {
 			push ecx
 			push edx
 	}
-	ReleaseMutex (hMusicTypeMutex);
+	UnlockHandle (hMusicStateMutex);
 	_asm {
 		pop edx
 			pop ecx
@@ -177,7 +174,7 @@ _declspec(naked) void DetectBattleMusic (void) {
 			push ecx
 			push edx
 	}
-	WaitForSingleObject (hMusicTypeMutex, INFINITE);		//Affects EAX, ECX, and EDX
+	LockHandle (hMusicStateMutex);		//Affects EAX, ECX, and EDX
 	_asm {
 		pop edx
 			pop ecx
@@ -197,7 +194,7 @@ _declspec(naked) void DetectBattleMusic (void) {
 			push ecx
 			push edx
 	}
-	ReleaseMutex (hMusicTypeMutex);
+	UnlockHandle (hMusicStateMutex);
 	_asm {
 		pop edx
 			pop ecx
@@ -216,7 +213,7 @@ _declspec(naked) void DetectNotBattleMusic_1 (void) {
 			push ecx
 			push edx
 	}
-	WaitForSingleObject (hMusicTypeMutex, INFINITE);
+	LockHandle (hMusicStateMutex);
 	_asm {
 		pop edx
 			pop ecx
@@ -236,7 +233,7 @@ _declspec(naked) void DetectNotBattleMusic_1 (void) {
 			push ecx
 			push edx
 	}
-	ReleaseMutex (hMusicTypeMutex);
+	UnlockHandle (hMusicStateMutex);
 	_asm {
 		pop edx
 			pop ecx
@@ -255,7 +252,7 @@ _declspec(naked) void DetectNotBattleMusic_2 (void) {
 			push ecx
 			push edx
 	}
-	WaitForSingleObject (hMusicTypeMutex, INFINITE);
+	LockHandle (hMusicStateMutex);
 	_asm {
 		pop edx
 			pop ecx
@@ -283,7 +280,7 @@ _declspec(naked) void DetectNotBattleMusic_2 (void) {
 			push ecx
 			push edx
 	}
-	ReleaseMutex (hMusicTypeMutex);
+	UnlockHandle (hMusicStateMutex);
 	_asm {
 		pop edx
 			pop ecx
@@ -310,12 +307,7 @@ _declspec(naked) void StreamMusicType (void) {
 	}
 
 	_MESSAGE ("Command >> StreamMusic >> Music type: %d", *streamSelectedType);
-	switch (*streamSelectedType) {
-		case 0: playMusicFile (obExplorePath"*"); break;
-		case 1: playMusicFile (obPublicPath"*"); break;
-		case 2: playMusicFile (obDungeonPath"*"); break;
-		case 4: playMusicFile (obBattlePath"*"); break;
-	}
+	parsePlayTrackCommand (*streamSelectedType);
 
 	_asm {
 		popad
@@ -336,25 +328,7 @@ _declspec(naked) void StreamMusicFile (void) {
 			mov streamSelectedText, eax
 	}
 	_MESSAGE ("Command >> StreamMusic >> %s", streamSelectedText);
-	if (_stricmp (streamSelectedText, "explore") == 0) {
-		playMusicFile (obExplorePath"*");
-	} else if (_stricmp (streamSelectedText, "public") == 0) {
-		playMusicFile (obPublicPath"*");
-	} else if (_stricmp (streamSelectedText, "dungeon") == 0) {
-		playMusicFile (obDungeonPath"*");
-	} else if (_stricmp (streamSelectedText, "battle") == 0) {
-		playMusicFile (obBattlePath"*");
-	} else if (_stricmp (streamSelectedText, "random") == 0) {
-		srand ((unsigned)time (NULL));
-		switch (rand () % 4) {
-			case 0: playMusicFile (obExplorePath"*"); break;
-			case 1: playMusicFile (obPublicPath"*"); break;
-			case 2: playMusicFile (obDungeonPath"*"); break;
-			case 3: playMusicFile (obBattlePath"*"); break;
-		}
-	} else {
-		playMusicFile (streamSelectedText);
-	}
+	parsePlayTrackCommand (streamSelectedText);
 	_asm {
 		popad
 			mov esp, ebp

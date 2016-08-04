@@ -1,20 +1,26 @@
 #include "PlayMusicFile.h"
 
+#include <string>
 #include <vector>
 #include <time.h>
 #include "GameAPI.h"
 #include "ThreadRequest.h"
 #include "FilePath.h"
+#include "VanillaPlaylistData.h"
 
 
-extern ThreadRequest threadRequest;
+
+using namespace std;
 
 
-bool playMusicFile (char* path) {
+
+bool playMusicFile (const char* path) {
 	return playMusicFile (string (path));
 }
 
-bool playMusicFile (string path) {
+
+
+bool playMusicFile (const string& path) {
 	string filePathC = cleanPath (path, true);
 	const char *charPath = filePathC.c_str ();
 
@@ -84,6 +90,41 @@ bool playMusicFile (string path) {
 		Console_Print ("Play track >> %s", filePathC.c_str ());
 	}
 	_MESSAGE ("Command >> emcPlayTrack >> %s", filePathC.c_str ());
-	threadRequest.requestPlayTrack (filePathC);
+	threadRequest.requestPlayCustomTrack (filePathC);
 	return true;
+}
+
+
+
+void parsePlayTrackCommand (const char* path) {
+	if (_stricmp (path, "explore") == 0) {
+		playMusicFile (obExplorePath);
+	} else if (_stricmp (path, "public") == 0) {
+		playMusicFile (obPublicPath);
+	} else if (_stricmp (path, "dungeon") == 0) {
+		playMusicFile (obDungeonPath);
+	} else if (_stricmp (path, "battle") == 0) {
+		playMusicFile (obBattlePath);
+	} else if (_stricmp (path, "random") == 0) {
+		srand ((unsigned)time (NULL));
+		switch (rand () % 4) {
+			case 0: playMusicFile (obExplorePath); break;
+			case 1: playMusicFile (obPublicPath); break;
+			case 2: playMusicFile (obDungeonPath); break;
+			case 3: playMusicFile (obBattlePath); break;
+		}
+	} else {
+		playMusicFile (path);
+	}
+}
+
+
+
+void parsePlayTrackCommand (int playlistCode) {
+	switch (playlistCode) {
+		case 0: playMusicFile (obExplorePath); break;
+		case 1: playMusicFile (obPublicPath); break;
+		case 2: playMusicFile (obDungeonPath); break;
+		case 4: playMusicFile (obBattlePath); break;
+	}
 }

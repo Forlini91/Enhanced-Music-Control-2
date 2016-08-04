@@ -126,6 +126,7 @@ copy "$(TargetPath)" "C:\Bethesda Softworks\Nehrim\Data\OBSE\Plugins\$(TargetFil
     <ClCompile Include="..\obse\obse\NiRTTI.cpp" />
     <ClCompile Include="..\obse\obse\Script.cpp" />
     <ClCompile Include="..\obse\obse\Utilities.cpp" />
+    <ClCompile Include="ActivePlaylist.cpp" />
     <ClCompile Include="Commands.cpp" />
     <ClCompile Include="dllmain.c">
       <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -133,8 +134,10 @@ copy "$(TargetPath)" "C:\Bethesda Softworks\Nehrim\Data\OBSE\Plugins\$(TargetFil
       <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
       </ForcedIncludeFiles>
     </ClCompile>
+    <ClCompile Include="EMC2INISettings.cpp" />
     <ClCompile Include="FadeThread.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="MainGameVarsPointer.cpp" />
     <ClCompile Include="MainThread.cpp" />
     <ClCompile Include="Multiplier.cpp" />
     <ClCompile Include="MusicPlayer.cpp" />
@@ -144,7 +147,7 @@ copy "$(TargetPath)" "C:\Bethesda Softworks\Nehrim\Data\OBSE\Plugins\$(TargetFil
     <ClCompile Include="SafeWrite\SafeWrite.cpp" />
     <ClCompile Include="FilePath.cpp" />
     <ClCompile Include="ThreadRequest.cpp" />
-    <ClCompile Include="XShellPath\Path.cpp" />
+    <ClCompile Include="ThreadState.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\obse\obse\GameActorValues.h" />
@@ -170,13 +173,14 @@ copy "$(TargetPath)" "C:\Bethesda Softworks\Nehrim\Data\OBSE\Plugins\$(TargetFil
     <ClInclude Include="FadeThread.h" />
     <ClInclude Include="FilePath.h" />
     <ClInclude Include="GlobalSettings.h" />
+    <ClInclude Include="ActivePlaylist.h" />
     <ClInclude Include="Hooks.h" />
     <ClInclude Include="INIManager.h" />
     <ClInclude Include="MainGameVarsPointer.h" />
     <ClInclude Include="MainGameVarsStruct.h" />
     <ClInclude Include="MainThread.h" />
     <ClInclude Include="Multiplier.h" />
-    <ClInclude Include="MusicPathPointer.h" />
+    <ClInclude Include="VanillaPlaylistData.h" />
     <ClInclude Include="MusicPlayer.h" />
     <ClInclude Include="Playlist.h" />
     <ClInclude Include="MusicType.h" />
@@ -187,7 +191,6 @@ copy "$(TargetPath)" "C:\Bethesda Softworks\Nehrim\Data\OBSE\Plugins\$(TargetFil
     <ClInclude Include="ThreadState.h" />
     <ClInclude Include="SME_Prefix.h" />
     <ClInclude Include="SoundStruct.h" />
-    <ClInclude Include="XShellPath\Path.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\obse\obse\GameRTTI_1_1.inl" />

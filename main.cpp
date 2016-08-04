@@ -36,22 +36,24 @@
 #include <unordered_map>
 
 //OBSE includes
-#include "obse/PluginAPI.h"
-#include "obse/GameAPI.h"
+#include "PluginAPI.h"
+#include "GameAPI.h"
 
 //Project includes
-#include "Hooks.h"
-#include "MainThread.h"
-#include "Commands.h"
-#include "SafeWrite/SafeWrite.h"
-//#include "MusicPathPointer.h"
-#include "MusicPlayer.h"
-#include "EMC2INISettings.h"
-#include "MainGameVarsPointer.h"
-#include "MusicState.h"
-#include "Multiplier.h"
-#include "OblivionINI.h"
 #include "GlobalSettings.h"
+#include "VanillaPlaylistData.h"
+#include "SafeWrite/SafeWrite.h"
+#include "Multiplier.h"
+#include "MusicType.h"
+#include "MusicState.h"
+#include "Playlist.h"
+#include "ActivePlaylist.h"
+#include "Hooks.h"
+#include "EMC2INISettings.h"
+#include "Commands.h"
+#include "ThreadRequest.h"
+#include "MainThread.h"
+
 
 using namespace std;
 
@@ -60,84 +62,15 @@ using namespace std;
 
 
 IDebugLog gLog("enhanced_music_control_2.log");
-PluginHandle				g_pluginHandle = kPluginHandle_Invalid;
-OBSESerializationInterface	* g_serialization = NULL;
-OBSEArrayVarInterface		* g_arrayIntfc = NULL;
-OBSEStringVarInterface		* g_stringIntfc = NULL;
-typedef OBSEArrayVarInterface::Array	OBSEArray;
-HANDLE hMusicTypeMutex;		//"Music Type" mutex  Lock when changing anything in Music.
-HANDLE hThePlayerMutex;		//"ThePlayer" Mutex.  Lock when using ThePlayer.
-HANDLE hPlaylistMutex;		//"Playlist" Mutex.  Lock when manipulating any of the playlists.
-HANDLE hSentryRequestMutex;	//"sentryRequest" Mutex.  Lock when asking SentryThread to do something.
-MainGameVarsPointer *mainGameVars = (MainGameVarsPointer *)0x00B33398;
 
-MusicState music;
-MusicPlayer musicPlayer;
-ThreadRequest threadRequest;
-ThreadState threadState;
-Playlist *plExplore;
-Playlist *plPublic;
-Playlist *plDungeon;
-Playlist *plCustom;
-Playlist *plBattle;
-Playlist *plTitle;
-Playlist *plDeath;
-Playlist *plSuccess;
+PluginHandle				g_pluginHandle;
+OBSESerializationInterface	*g_serialization = NULL;
+OBSEArrayVarInterface		*g_arrayIntfc = NULL;
+OBSEStringVarInterface		*g_stringIntfc = NULL;
 
-pair<MusicType, string> mapDataOrigNames[] = {
-	make_pair (MusicType::Explore, "Explore"),
-	make_pair (MusicType::Public, "Public"),
-	make_pair (MusicType::Dungeon, "Dungeon"),
-	make_pair (MusicType::Custom, "Custom"),
-	make_pair (MusicType::Battle, "Battle"),
-	make_pair (MusicType::Undefined, "Undefined"),
-	make_pair (MusicType::Special, "Special"),
-	make_pair (MusicType::Mt_NotKnown, "None")
-};
-pair<SpecialMusicType, string> mapDataOrigSpecNames[] = {
-	make_pair (SpecialMusicType::Success, "Success"),
-	make_pair (SpecialMusicType::Death, "Death"),
-	make_pair (SpecialMusicType::Title, "Title"),
-	make_pair (SpecialMusicType::Sp_NotKnown, "None")
-};
-pair<MusicType, Playlist**> mapDataPlaylists[] = {
-	make_pair (MusicType::Explore, &plExplore),
-	make_pair (MusicType::Public, &plPublic),
-	make_pair (MusicType::Dungeon, &plDungeon),
-	make_pair (MusicType::Custom, &plCustom),
-	make_pair (MusicType::Battle, &plBattle)
-};
-pair<SpecialMusicType, Playlist**> mapDataSpecPlaylists[] = {
-	make_pair (SpecialMusicType::Success, &plSuccess),
-	make_pair (SpecialMusicType::Death, &plDeath),
-	make_pair (SpecialMusicType::Title, &plTitle),
-};
-map <MusicType, string> musicTypes (mapDataOrigNames, mapDataOrigNames + 8);
-map <SpecialMusicType, string> specialMusicTypes (mapDataOrigSpecNames, mapDataOrigSpecNames + 4);
-map <MusicType, Playlist**> varsMusicType (mapDataPlaylists, mapDataPlaylists + 5);
-map <SpecialMusicType, Playlist**> varsSpecialMusicType (mapDataSpecPlaylists, mapDataSpecPlaylists + 3);
-
-unordered_map <string, Playlist> playlists;
-unordered_map <string, Multiplier> multipliersVanilla;
-unordered_map <string, Multiplier> multipliersCustom;
-
-
-//This holds the names of playlist that are loaded.
-//In the case our collection reallocates itself after a new
-//playlist is added, this can be used to repair the bad references.
-string vanillaPlaylistNames[] = {
-	obExplore,
-	obPublic,
-	obDungeon,
-	obCustom,
-	obBattle
-};
 
 bool printNewTrack = false;
 bool delayTitleMusicEnd = true;
-volatile bool* bMusicEnabled;
-volatile float* iniMasterVolume;
-volatile float* iniMusicVolume;
 int numPlaylists;
 int numMultipliers;
 
@@ -151,158 +84,14 @@ int numMultipliers;
 
 
 
-Playlist* addPlaylist (const string& name, const string& paths, bool randomOrder, bool vanillaPlaylist) {
-	auto insResult = playlists.emplace (BUILD_IN_PLACE(name, name, paths, randomOrder, vanillaPlaylist));
-	return &insResult.first->second;
-}
-
-
-
-MusicType getAssignedMusicType (const Playlist* playlist) {
-	if (playlist == plExplore) {
-		return MusicType::Explore;
-	} else if (playlist == plPublic) {
-		return MusicType::Public;
-	} else if (playlist == plDungeon) {
-		return MusicType::Dungeon;
-	} else if (playlist == plCustom) {
-		return MusicType::Custom;
-	} else if (playlist == plBattle) {
-		return MusicType::Battle;
-	} else if (playlist == plSuccess || playlist == plDeath || playlist == plTitle) {
-		return MusicType::Special;
-	} else {
-		return MusicType::Mt_NotKnown;
-	}
-}
-
-SpecialMusicType getAssignedSpecialMusicType (const Playlist* playlist) {
-	if (playlist == plSuccess) {
-		return SpecialMusicType::Success;
-	} else if (playlist == plDeath) {
-		return SpecialMusicType::Death;
-	} else if (playlist == plTitle) {
-		return SpecialMusicType::Title;
-	} else {
-		return SpecialMusicType::Sp_NotKnown;
-	}
-}
-
-
-
-void applyIniValues () {
-	float val;
-
-	val = kINIMusicSpeed.GetData ().f;
-	if (isInRange (val, 0, 100)) {
-		musicPlayer.setMusicSpeed ((double)val);
-	}
-
-	val = kINIFadeOut.GetData ().f;
-	if (isInRange (val, 0, 9999)) {
-		musicPlayer.setCurrentFadeOutLength ((double)val * 1000);
-	}
-
-	val = kINIFadeIn.GetData ().f;
-	if (isInRange (val, 0, 9999)) {
-		musicPlayer.setCurrentFadeInLength ((double)val * 1000);
-	}
-
-	val = kINITrackPause.GetData ().f;
-	if (isInRange (val, 0, 9999)) {
-		musicPlayer.setMinPauseTime ((double)val * 1000);
-	}
-
-	val = kINITrackPauseExtra.GetData ().f;
-	if (isInRange (val, 0, 9999)) {
-		musicPlayer.setExtraPauseTime ((double)val * 1000);
-	}
-
-	val = kINIBattleMusicStartDelay.GetData ().f;
-	if (isInRange (val, 0, 9999)) {
-		musicPlayer.setMinBattleDelay ((double)val * 1000);
-	}
-
-	val = kINIBattleMusicStartDelayExtra.GetData ().f;
-	if (isInRange (val, 0, 9999)) {
-		musicPlayer.setExtraBattleDelay ((double)val * 1000);
-	}
-
-	val = kINIBattleMusicEndDelay.GetData ().f;
-	if (isInRange (val, 0, 9999)) {
-		musicPlayer.setMinAfterBattleDelay ((double)val * 1000);
-	}
-
-	val = kINIBattleMusicEndDelayExtra.GetData ().f;
-	if (isInRange (val, 0, 9999)) {
-		musicPlayer.setExtraAfterBattleDelay ((double)val * 1000);
-	}
-
-	val = kINIBattleMusicEndDelayExtra.GetData ().f;
-	if (isInRange (val, 0, 9999)) {
-		musicPlayer.setExtraAfterBattleDelay ((double)val * 1000);
-	}
-
-	val = kINIPreviousTrackRemember.GetData ().f;
-	if (isInRange (val, 0, 9999)) {
-		musicPlayer.setMaxRestoreTime ((double)val * 1000);
-	}
-
-	delayTitleMusicEnd = (kINIDelayTitleMusicEnd.GetData ().i > 0);
-
-	printNewTrack = (kINIPrintTrack.GetData ().i > 0);
-
-	_MESSAGE ("INI loaded");
-}
-
-
-
-void initialization () {
-	applyIniValues ();
-
-	_MESSAGE ("Initialization >> Oblivion.ini data");
-	bMusicEnabled = INI::Audio::bMusicEnabled;
-	iniMasterVolume = INI::Audio::fDefaultMasterVolume;
-	iniMusicVolume = INI::Audio::fDefaultMusicVolume;
-
-	_MESSAGE ("Initialization >> Playlists");
-	plDeath->addPath (obDeathPath"_*.mp3");
-	plDeath->addPath (obDeathPath"_*.wav");
-	plDeath->addPath (obDeathPath"_*.wma");
-	plSuccess->addPath (obSuccessPath"_*.mp3");
-	plSuccess->addPath (obSuccessPath"_*.wav");
-	plSuccess->addPath (obSuccessPath"_*.wma");
-	plTitle->addPath (obTitlePath"_*.mp3");
-	plTitle->addPath (obTitlePath"_*.wav");
-	plTitle->addPath (obTitlePath"_*.wma");
-
-	_MESSAGE ("Initialization >> Multipliers");
-	multipliersVanilla.emplace (BUILD_IN_PLACE (obMaster, &mainGameVars->gameVars->SoundRecords->fMasterVolume));
-	multipliersVanilla.emplace (BUILD_IN_PLACE (obMasterIni, INI::Audio::fDefaultMasterVolume));
-	multipliersVanilla.emplace (BUILD_IN_PLACE (obMusic, &mainGameVars->gameVars->SoundRecords->fMusicVolumeDup));
-	multipliersVanilla.emplace (BUILD_IN_PLACE (obMusicIni, INI::Audio::fDefaultMusicVolume));
-	multipliersVanilla.emplace (BUILD_IN_PLACE (obEffects, &mainGameVars->gameVars->SoundRecords->fEffectsVolume));
-	multipliersVanilla.emplace (BUILD_IN_PLACE (obEffectsIni, INI::Audio::fDefaultEffectsVolume));
-	multipliersVanilla.emplace (BUILD_IN_PLACE (obFoot, &mainGameVars->gameVars->SoundRecords->fFootVolume));
-	multipliersVanilla.emplace (BUILD_IN_PLACE (obFootIni, INI::Audio::fDefaultFootVolume));
-	multipliersVanilla.emplace (BUILD_IN_PLACE (obVoice, &mainGameVars->gameVars->SoundRecords->fVoiceVolume));
-	multipliersVanilla.emplace (BUILD_IN_PLACE (obVoiceIni, INI::Audio::fDefaultVoiceVolume));
-}
-
-
-
-
-
-
-
 
 //EMCT - World MusicType playing at time of save.
 //EMCV - The Relative Volume.
 static void EMC2_SaveCallback(void * reserved) {
 	_MESSAGE("Event >> SaveGame");
-	WaitForSingleObject (hMusicTypeMutex, INFINITE);
-	MusicType save = (music.GetWorldMusic());
-	ReleaseMutex (hMusicTypeMutex);
+	LockHandle (hMusicStateMutex);
+		MusicType save = (music.GetWorldMusic());
+	UnlockHandle (hMusicStateMutex);
 
 	string dataString = to_string (save);
 	g_serialization->OpenRecord('EMCT', 0);
@@ -325,23 +114,23 @@ static void EMC2_LoadCallback(void * reserved) {
 		case 'EMCT':
 			g_serialization->ReadRecordData(buf, length);
 			buf[length] = 0;
-			WaitForSingleObject(hMusicTypeMutex, INFINITE);
-			music.world = MusicType (atoi (buf));
-			music.state = MusicType::Mt_NotKnown;
-			ReleaseMutex(hMusicTypeMutex);
+			LockHandle (hMusicStateMutex);
+				music.world = MusicType (atoi (buf));
+				music.state = MusicType::Mt_NotKnown;
+			UnlockHandle (hMusicStateMutex);
 			_MESSAGE("Event >> LoadGame >> World music: %s", buf);
 			break;
 		}
 	}
 
-	for (auto it = multipliersCustom.begin (); it != multipliersCustom.end (); it++) {
+	for (MultipliersMap::iterator it = multipliersCustom.begin (); it != multipliersCustom.end (); it++) {
 		Multiplier& mult = it->second;
-		WaitForSingleObject (mult.hThread, INFINITE);
-		if (!mult.isDestroyed && !mult.saveSession) {
-			mult.isDestroyed = true;
-			_MESSAGE ("Event >> LoadGame >> Multiplier destroyed: %s", it->first);
-		}
-		ReleaseMutex (mult.hThread);
+		LockHandle (mult.hThread);
+			if (!mult.isDestroyed && !mult.saveSession) {
+				mult.isDestroyed = true;
+				_MESSAGE ("Event >> LoadGame >> Multiplier destroyed: %s", it->first);
+			}
+		UnlockHandle (mult.hThread);
 	}
 
 }
@@ -350,19 +139,19 @@ static void EMC2_LoadCallback(void * reserved) {
 
 static void EMC2_NewGameCallback(void * reserved) {
 	_MESSAGE("Event >> NewGame");
-	WaitForSingleObject (hMusicTypeMutex, INFINITE);
-	music.world = MusicType::Dungeon;			//Should be fine for your vanilla Oblivion.
-	music.state = MusicType::Mt_NotKnown;
-	ReleaseMutex(hMusicTypeMutex);
+	LockHandle (hMusicStateMutex);
+		music.world = MusicType::Dungeon;			//Should be fine for your vanilla Oblivion.
+		music.state = MusicType::Mt_NotKnown;
+	UnlockHandle (hMusicStateMutex);
 
-	for (auto it = multipliersCustom.begin (); it != multipliersCustom.end (); it++) {
+	for (MultipliersMap::iterator it = multipliersCustom.begin (); it != multipliersCustom.end (); it++) {
 		Multiplier *mult = &it->second;
-		WaitForSingleObject (mult->hThread, INFINITE);
-		if (!mult->isDestroyed && !mult->saveSession) {
-			mult->isDestroyed = true;
-			_MESSAGE ("Event >> NewGame >> Multiplier destroyed: %s", it->first);
-		}
-		ReleaseMutex (it->second.hThread);
+		LockHandle (mult->hThread);
+			if (!mult->isDestroyed && !mult->saveSession) {
+				mult->isDestroyed = true;
+				_MESSAGE ("Event >> NewGame >> Multiplier destroyed: %s", it->first);
+			}
+		UnlockHandle (it->second.hThread);
 	}
 }
 
@@ -397,18 +186,18 @@ extern "C" {
 				return false;
 			}
 
-			g_arrayIntfc = (OBSEArrayVarInterface *)obse->QueryInterface(kInterface_ArrayVar);
-			if (!g_arrayIntfc) {
-				_ERROR("EMC2 >> Array interface not found");
-				return false;
-			}
-
 			g_stringIntfc = (OBSEStringVarInterface*)obse->QueryInterface(kInterface_StringVar);
-			if (!g_serialization) {
+			if (!g_stringIntfc) {
 				_ERROR("EMC2 >> String interface not found");
 				return false;
 			} else if (g_stringIntfc->version < OBSEStringVarInterface::kVersion) {
 				_ERROR ("EMC2 >> Incorrect string interface version found (got %08X need %08X)", g_stringIntfc->version, OBSEStringVarInterface::kVersion);
+				return false;
+			}
+
+			g_arrayIntfc = (OBSEArrayVarInterface *)obse->QueryInterface (kInterface_ArrayVar);
+			if (!g_arrayIntfc) {
+				_ERROR ("EMC2 >> Array interface not found");
 				return false;
 			}
 		}
@@ -421,7 +210,6 @@ extern "C" {
 		_MESSAGE("EMC2 >> Load");
 
 		RegisterStringVarInterface (g_stringIntfc);
-		g_pluginHandle = obse->GetPluginHandle();
 
 		/***************************************************************************
 		*
@@ -506,35 +294,36 @@ extern "C" {
 
 		//Initialize the Mutex so Sentry thread knows when its safe to
 		//read or alter global variables.
-		hMusicTypeMutex = CreateMutex(NULL, FALSE, NULL);  // Starts cleared, no owner
-		hThePlayerMutex = CreateMutex(NULL, FALSE, NULL);
+		hMusicStateMutex = CreateMutex(NULL, FALSE, NULL);  // Starts cleared, no owner
+		hMusicPlayerMutex = CreateMutex(NULL, FALSE, NULL);
 		hPlaylistMutex = CreateMutex(NULL, FALSE, NULL);
-		hSentryRequestMutex = CreateMutex(NULL, FALSE, NULL);
+		hThreadMutex = CreateMutex(NULL, FALSE, NULL);
 
 		
 		// set up serialization callbacks when running in the runtime
 		if (!obse->isEditor) {
 			// NOTE: SERIALIZATION DOES NOT WORK USING THE DEFAULT OPCODE BASE IN RELEASE BUILDS OF OBSE
 			// it works in debug builds
+			g_pluginHandle = obse->GetPluginHandle ();
 			g_serialization->SetSaveCallback (g_pluginHandle, EMC2_SaveCallback);
 			g_serialization->SetLoadCallback (g_pluginHandle, EMC2_LoadCallback);
 			g_serialization->SetNewGameCallback (g_pluginHandle, EMC2_NewGameCallback);
 
 			//Override game's music system.
 			//Patch the StreamMusic command.
-			WriteRelCall (0x005096CA, (UInt32)&StreamMusicType);	//"Random"
-			WriteRelCall (0x005096F2, (UInt32)&StreamMusicType);	//"Explore"
-			WriteRelCall (0x0050971B, (UInt32)&StreamMusicType);	//"Public"
-			WriteRelCall (0x00509741, (UInt32)&StreamMusicType);	//"Dungeon"
-			WriteRelCall (0x00509767, (UInt32)&StreamMusicType);	//"Battle"
-			WriteRelCall (0x00509779, (UInt32)&StreamMusicFile);	//"Custom"
-			WriteRelCall (0x00509780, (UInt32)&StreamMusicFileDoNothing);	//"Pathname"
+			WriteRelCall (0x005096CA, (UInt32)&StreamMusicType);		//"Random"
+			WriteRelCall (0x005096F2, (UInt32)&StreamMusicType);		//"Explore"
+			WriteRelCall (0x0050971B, (UInt32)&StreamMusicType);		//"Public"
+			WriteRelCall (0x00509741, (UInt32)&StreamMusicType);		//"Dungeon"
+			WriteRelCall (0x00509767, (UInt32)&StreamMusicType);		//"Battle"
+			WriteRelCall (0x00509779, (UInt32)&StreamMusicFile);		//"Pathname"
+			WriteRelCall (0x00509780, (UInt32)&StreamMusicFileDoNothing);	//"Return"
 
-			//Replace the vanilla behaviour
+			//Block the vanilla behaviour
 			WriteRelJump (0x006AB160, (UInt32)&QueueMusicTrack);
 			WriteRelJump (0x006AB420, (UInt32)&PlayQueuedMusic);
 
-			//These will tell us when different music states are detected.
+			//Detect the different music states.
 			WriteRelJump (0x005B5B68, (UInt32)&DetectTitleMusic);
 			WriteRelJump (0x005AD098, (UInt32)&DetectSuccessMusic);
 			WriteRelJump (0x0066068B, (UInt32)&DetectBattleMusic);
@@ -542,25 +331,22 @@ extern "C" {
 			WriteRelJump (0x00660691, (UInt32)&DetectNotBattleMusic_2);
 			WriteRelJump (0x006AC026, 0x006AC056);	// Stop Oblivion from writing current volume levels to INI. The audio menu does it anyway.
 
-			EMC2INISettings iniSettings;
-			iniSettings.Initialize (INI_PATH, NULL);
 
-			numPlaylists = kINIMaxNumPlaylists.GetData ().i;		//From ini
-			numMultipliers = kINIMaxNumMultipliers.GetData ().i;	//From ini
-			playlists.reserve (numPlaylists);
-			multipliersVanilla.reserve (10);	//FIXED (5 mults from sliders + 5 mults from ini)
-			multipliersCustom.reserve (numMultipliers);
+			iniSettings.Initialize (INI_PATH, NULL);
+			iniSettings.applySettings (delayTitleMusicEnd, printNewTrack, numPlaylists, numMultipliers);
+			playlists.reserve (numPlaylists+1);
+			multipliersCustom.reserve (numMultipliers+1);
 
 			_MESSAGE ("Create default playlists");
-			//MusicPathPointer *defaultMusicPaths = (MusicPathPointer *)0x00A76DC4;
-			plExplore = addPlaylist (obExplore, obExplorePath"*", true, true);
-			plPublic = addPlaylist (obPublic, obPublicPath"*", true, true);
-			plDungeon = addPlaylist (obDungeon, obDungeonPath"*", true, true);
-			plCustom = plExplore;
-			plBattle = addPlaylist (obBattle, obBattlePath"*", true, true);
-			plDeath = addPlaylist (obDeath, obDeathPath".mp3", true, true);
-			plSuccess = addPlaylist (obSuccess, obSuccessPath".mp3", true, true);
-			plTitle = addPlaylist (obTitle, obTitlePath".mp3", true, true);
+
+			apl_Explore	= vanillaPlaylists[0] = &GET_EMPLACED (EMPLACE_PLAYLIST (obExplore, obExplorePath, true, true));
+			apl_Public	= vanillaPlaylists[1] = &GET_EMPLACED (EMPLACE_PLAYLIST (obPublic, obPublicPath, true, true));
+			apl_Dungeon	= vanillaPlaylists[2] = &GET_EMPLACED (EMPLACE_PLAYLIST (obDungeon, obDungeonPath, true, true));
+			apl_Custom	= vanillaPlaylists[3] = &GET_EMPLACED (EMPLACE_PLAYLIST_UNDEF (obCustom, true));
+			apl_Battle	= vanillaPlaylists[4] = &GET_EMPLACED (EMPLACE_PLAYLIST (obBattle, obBattlePath, true, true));
+			apl_Death	= vanillaPlaylists[5] = &GET_EMPLACED (EMPLACE_PLAYLIST (obDeath, obDeathPath, true, true));
+			apl_Success	= vanillaPlaylists[6] = &GET_EMPLACED (EMPLACE_PLAYLIST (obSuccess, obSuccessPath, true, true));
+			apl_Title	= vanillaPlaylists[7] = &GET_EMPLACED (EMPLACE_PLAYLIST (obTitle, obTitlePath, true, true));
 	
 			_beginthread (MainThread, 0, NULL);
 		}

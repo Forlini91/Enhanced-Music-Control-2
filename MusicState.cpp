@@ -2,6 +2,11 @@
 
 
 
+MusicState music;
+HANDLE hMusicStateMutex;	//"Music Type" mutex  Lock when using the object musicState.
+
+
+
 MusicType MusicState::GetCurrentMusicType (bool forceWorld) {
 	if (state != MusicType::Mt_NotKnown)
 		if (world != MusicType::Special)
@@ -77,4 +82,10 @@ bool MusicState::checkOverride () {
 		}
 	}
 	return false;
+}
+
+
+
+bool isMusicTypeValid (int musicType) {
+	return musicType >= 0 && musicType <= 4;
 }

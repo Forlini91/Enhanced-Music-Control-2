@@ -2,6 +2,12 @@
 
 #include "MusicType.h"
 
+
+
+extern HANDLE hMusicStateMutex;
+
+
+
 class MusicState {
 
 public:
@@ -36,3 +42,6 @@ private:
 	bool checkOverride ();
 
 };
+
+
+extern MusicState music;

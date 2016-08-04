@@ -1,15 +1,25 @@
 #pragma once
 
+#include <unordered_map>
+#include <string>
+
+
+
+
+using namespace std;
+
+
+
 struct Multiplier {
 
 private:
 	volatile float* value;
-	const bool userMultiplier;
+	bool userMultiplier;
 
 
 public:
 
-	Multiplier () : value (new float (1)), userMultiplier (true) {};
+	Multiplier () {};
 	Multiplier (float value) : value (new float (value)), userMultiplier (true) {};
 	Multiplier (volatile float* var) : value (var), userMultiplier (false) {};
 	~Multiplier ();
@@ -28,7 +38,29 @@ public:
 
 	void setValue (float newValue);
 
-	bool fadeVolume (float targetValue, float fadeTime);
+	bool setValueLimit (float newValue, float limit);
+
+	void fadeVolume (float targetValue, float fadeTime);
 
 	float clamp (float volume);
+
+	void operator<< (volatile float* var) {
+		value = var;
+	}
 };
+
+
+typedef unordered_map<string, Multiplier> MultipliersMap;
+typedef pair<MultipliersMap::iterator, bool> MultiplierEmplaced;
+
+extern Multiplier multObMaster;
+extern Multiplier multObMasterIni;
+extern Multiplier multObMusic;
+extern Multiplier multObMusicIni;
+extern Multiplier multObEffects;
+extern Multiplier multObEffectsIni;
+extern Multiplier multObVoice;
+extern Multiplier multObVoiceIni;
+extern Multiplier multObFoot;
+extern Multiplier multObFootIni;
+extern MultipliersMap multipliersCustom;

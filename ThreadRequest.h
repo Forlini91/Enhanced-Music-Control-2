@@ -9,6 +9,10 @@ using namespace std;
 
 
 
+extern HANDLE hThreadMutex;
+
+
+
 class ThreadRequest {
 
 public:
@@ -50,8 +54,14 @@ public:
 public:
 	void requestSetPlaylist (Playlist* playlist, MusicType musicType, int queueMode, float delay);
 
-	void requestPlayTrack (string& track);
+	void requestResetPlaylist (MusicType musicType);
 
+	void requestPlayCustomTrack (string& track);
+	
 	bool hasRequestedCustomTrack ();
 
+	void requestHoldMusic (bool keepStopped);
+
 };
+
+extern ThreadRequest threadRequest;

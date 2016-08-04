@@ -2,12 +2,12 @@
 
 #include "CommandTable.h"
 #include "GameAPI.h"
-#include "Multiplier.h"
-#include "MusicType.h"
-#include "Playlist.h"
 
-
-
+#define CONSOLE (IsConsoleOpen () && IsConsoleMode ())
+#define BUILD_IN_PLACE(key, ...) piecewise_construct, forward_as_tuple(key), forward_as_tuple(__VA_ARGS__) 
+#define EMPLACE_PLAYLIST(name,paths,randomOrder,vanillaPlaylist) playlists.emplace (BUILD_IN_PLACE(name, name, paths, randomOrder, vanillaPlaylist))
+#define EMPLACE_PLAYLIST_UNDEF(name,vanillaPlaylist) playlists.emplace (BUILD_IN_PLACE(name, name, vanillaPlaylist))
+#define GET_EMPLACED(x) x.first->second
 
 
 
@@ -127,7 +127,6 @@ static CommandInfo kIsPlaylistActiveCommand = {
 
 
 
-void Cmd_SetPlaylist_Execute2 (const char* plName, MusicType targetMT, int queueMode, float delay, int i, Playlist **playlist);
 bool Cmd_SetPlaylist_Execute (COMMAND_ARGS);
 static ParamInfo kParams_SetPlaylist[4] = {
 	{"music type", kParamType_Integer, 0},
@@ -184,14 +183,17 @@ static CommandInfo kIsMusicSwitchingCommand = {
 
 
 bool Cmd_GetAllPlaylists_Execute (COMMAND_ARGS);
+static ParamInfo kParams_GetAllPlaylists[1] = {
+	{"only active", kParamType_Integer, 1},
+};
 static CommandInfo kGetAllPlaylistsCommand = {
 	"emcGetAllPlaylists",
 	"",
 	0,
 	"Gets the names of all playlists",
 	0,
-	0,
-	NULL,
+	1,
+	kParams_GetAllPlaylists,
 	Cmd_GetAllPlaylists_Execute
 };
 
@@ -742,6 +744,17 @@ static ParamInfo kParams_PlayTrack[1] = {
 static CommandInfo kPlayTrackCommand = {
 	"emcPlayTrack",
 	"",
+	0,
+	"Play the given track then resume the previous playlist.",
+	0,
+	1,
+	kParams_PlayTrack,
+	Cmd_PlayTrack_Execute
+};
+
+static CommandInfo kStreamMusicCommand = {
+	"StreamMusic",
+	"StreamMusic",
 	0,
 	"Play the given track then resume the previous playlist.",
 	0,

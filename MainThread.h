@@ -1,15 +1,23 @@
 #pragma once
 
-#include "ThreadRequest.h"
-#include "ThreadState.h"
+
+
+
+#define SLEEP_TIME 25
+
 
 using namespace std;
 
+extern volatile bool *bMusicEnabled;
+extern volatile float *iniMasterVolume;
+extern volatile float *iniMusicVolume;
 
 
-bool isInRange (float val, float min, float max);
 
 
+
+
+void MainThread_DelayedInitialization ();
 
 void MainThread_ResetStartBattleTimer ();
 

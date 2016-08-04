@@ -4,23 +4,20 @@
 #include <string>
 #include <deque>
 #include <vector>
+#include <unordered_map>
 
 #include "MusicType.h"
+
+
 
 
 using namespace std;
 
 
 
-
-
 class Playlist {
 
 private:
-
-	//The name of this playlist.  This value may be used later to increase the capabilities
-	//of this music system.  It can be accessed by friendly classes to help manage a collection.
-	string name;
 
 	//The array containing the paths of the tracks in the list.
 	//Everytime curIndex cycles through the list, it will be reordered,
@@ -55,18 +52,22 @@ private:
 	//This function builds the playlist from the value held in TargetPath.
 	bool buildPaths (const string& paths);
 
-	bool buildPath (const string& path);
+	bool buildPath (const string& path, bool add);
 
 
 
 public:
 
+	//The name of this playlist.  This value may be used later to increase the capabilities
+	//of this music system.  It can be accessed by friendly classes to help manage a collection.
+	const char* name;
+
+
 	Playlist (const Playlist* copyFrom);
 
-	//Initializes a new MusicPlaylist from a path (which can have a search pattern)
-	//and gives it a name.  The name will be used later on for custom playlists,
-	//but I won't impliment that at this time.
-	Playlist (const string& name, const string& paths, bool randomOrder, bool vanillaPlaylist);
+	Playlist (const char* name, bool vanillaPlaylist);
+
+	Playlist (const char* name, const string& paths, bool randomOrder, bool vanillaPlaylist);
 
 	//Set the given paths and build the tracks/paths vectors.
 	bool setPaths (const string& paths, bool randomOrder);
@@ -74,9 +75,7 @@ public:
 	//Adds a SINGLE path to the playlist, and reinitializes it.
 	bool addPath (const string& path);
 
-	//Get the playlist name
-	const string& getName () const;
-
+	//Gets all tracks in the playlist
 	const vector<string>& Playlist::getTracks () const;
 
 	//Number of tracks in the playlist
@@ -101,4 +100,19 @@ public:
 
 	void printTracks () const;
 
+	
+
+	bool operator== (const Playlist& playlist) const;
+
+	bool operator== (const Playlist* playlist) const;
+
 };
+
+
+typedef unordered_map<string, Playlist> PlaylistsMap;
+typedef pair<PlaylistsMap::iterator, bool> PlaylistEmplaceResult;
+
+
+extern HANDLE hPlaylistMutex;
+extern Playlist* vanillaPlaylists[8];
+extern PlaylistsMap playlists;

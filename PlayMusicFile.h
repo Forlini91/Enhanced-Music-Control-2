@@ -2,8 +2,16 @@
 
 #include <string>
 
+
+
 using namespace std;
 
-bool playMusicFile (char* path);
 
-bool playMusicFile (string path);
+
+extern bool playMusicFile (const char* path);
+
+extern bool playMusicFile (const string& path);
+
+extern void parsePlayTrackCommand (const char* path);
+
+extern void parsePlayTrackCommand (int playlistCode);

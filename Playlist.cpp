@@ -10,26 +10,29 @@ using namespace std;
 
 
 
+HANDLE hPlaylistMutex;		//"Playlist" Mutex.  Lock when reading/manipulating any of the playlists.
+Playlist* vanillaPlaylists[8];
+PlaylistsMap playlists;
 
 
 
-
-Playlist::Playlist (const Playlist* copyFrom) : vanillaPlaylist (false) {
+Playlist::Playlist (const Playlist* copyFrom) : name(copyFrom->name), vanillaPlaylist (false) {
 	copyFrom->copyTo (this);
 }
 
 
 
-//Initializes a new Playlist from a path (which can have a search pattern)
-//and gives it a name.  The name will be used later on for custom playlists,
-//but I won't impliment that at this time.
-Playlist::Playlist (const string& name, const string& paths, bool randomOrder, bool vanillaPlaylist) : name (name), randomOrder(randomOrder), vanillaPlaylist (vanillaPlaylist) {
+Playlist::Playlist (const char* name, bool vanillaPlaylist) : name (name), vanillaPlaylist (vanillaPlaylist) {}
+
+
+
+Playlist::Playlist (const char* name, const string& paths, bool randomOrder, bool vanillaPlaylist) : name (name), randomOrder (randomOrder), vanillaPlaylist (vanillaPlaylist) {
 	if (setPaths (paths, randomOrder)) {
-		_MESSAGE ("Playlist: \"%s\" > Created succesfully", name.c_str ());
+		_MESSAGE ("Playlist: \"%s\" > Created succesfully", name);
 	} else if (vanillaPlaylist) {
-		_MESSAGE ("Playlist: \"%s\" > Vanilla playlist without tracks", name.c_str ());
+		_MESSAGE ("Playlist: \"%s\" > Vanilla playlist without tracks", name);
 	} else {
-		_WARNING ("Playlist: \"%s\" > Not succesfully created", name.c_str ());
+		_WARNING ("Playlist: \"%s\" > Not succesfully created", name);
 		throw exception ();
 	}
 }
@@ -48,23 +51,17 @@ bool Playlist::setPaths (const string& paths, bool randomOrder) {
 
 
 bool Playlist::addPath (const string& path) {
-	_MESSAGE ("Playlist: \"%s\" > Add path: \"%s\"", name.c_str (), path.c_str ());
-	if (buildPath (path)) {
-		_MESSAGE ("Playlist: \"%s\" > Added path: \"%s\"", name.c_str (), path.c_str ());
+	_MESSAGE ("Playlist: \"%s\" > Add path: \"%s\"", name, path.c_str ());
+	if (buildPath (path, true)) {
+		_MESSAGE ("Playlist: \"%s\" > Added path: \"%s\"", name, path.c_str ());
 		initialized = true;
 		sortTracks (true);
 		curIndex = -1;
 		return true;
 	} else {
-		_MESSAGE ("Playlist: \"%s\" > Path is not valid or empty: \"%s\"", name.c_str (), path.c_str ());
+		_MESSAGE ("Playlist: \"%s\" > Path is not valid or empty: \"%s\"", name, path.c_str ());
 		return false;
 	}
-}
-
-
-
-const string& Playlist::getName () const {
-	return name;
 }
 
 
@@ -124,7 +121,6 @@ bool Playlist::isVanilla () const {
 
 
 void Playlist::copyTo (Playlist* copyTo) const {
-	copyTo->name = name;
 	copyTo->paths = paths;
 	copyTo->randomOrder = randomOrder;
 	copyTo->tracks = tracks;
@@ -148,7 +144,7 @@ void Playlist::printTracks () const {
 			Console_Print ("Track: %s", t.c_str());
 		}
 	} else {
-		Console_Print ("%s has no track", name.c_str ());
+		Console_Print ("%s has no track", name);
 	}
 }
 
@@ -195,7 +191,7 @@ bool Playlist::buildPaths (const string& pathList) {
 	//The string may contains more than one path, separated by '>' or '|'.
 	vector<string> pathVec = tokenizePaths (pathList);
 	for (string path : pathVec) {
-		if (buildPath (path)) {
+		if (buildPath (path, false)) {
 			once = true;
 		}
 	}
@@ -206,7 +202,7 @@ bool Playlist::buildPaths (const string& pathList) {
 
 
 
-bool Playlist::buildPath (const string& path) {
+bool Playlist::buildPath (const string& path, bool add) {
 
 	//This will make the path absolute in relation to Oblivion's main directory only if the path is currently relative, else it does nothing to the path.
 	string filePathC = cleanPath (path, true);
@@ -214,7 +210,7 @@ bool Playlist::buildPath (const string& path) {
 
 	if (isDirectory (filePathC)) {
 		if (filePathC.back () != '\\') {
-			filePathC += "\*";
+			filePathC += "\\*";
 			charPath = filePathC.c_str ();
 		} else {
 			filePathC.push_back ('*');
@@ -241,8 +237,10 @@ bool Playlist::buildPath (const string& path) {
 			}
 			
 			once = true;
-			fileName = cleanPath (fileName, false);
-			tracks.push_back (folderPathC + fileName);
+			fileName = folderPathC + cleanPath (fileName, false);
+			if (!add || find (tracks.begin (), tracks.end (), fileName) == tracks.end ()) {
+				tracks.push_back (fileName);
+			}
 		} while (FindNextFileA (hFind, &FindFileData) != 0);
 		FindClose (hFind);
 
@@ -256,4 +254,13 @@ bool Playlist::buildPath (const string& path) {
 		return true;
 	}
 	return false;
+}
+
+
+bool Playlist::operator== (const Playlist& playlist) const {
+	return name == playlist.name;
+}
+
+bool Playlist::operator== (const Playlist* playlist) const {
+	return name == playlist->name;
 }

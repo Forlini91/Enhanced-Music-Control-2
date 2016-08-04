@@ -1,5 +1,7 @@
 #pragma once
 
+
+
 enum MusicType : int {
 	Explore = 0,
 	Public,
@@ -17,3 +19,6 @@ enum SpecialMusicType : int {
 	Title,
 	Sp_NotKnown = 0xFF
 };
+
+//Checks whatever the given value is between 0 (Explore) and 4 (Battle)
+extern bool isMusicTypeValid (int musicType);

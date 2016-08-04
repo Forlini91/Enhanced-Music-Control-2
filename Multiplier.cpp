@@ -3,7 +3,23 @@
 
 
 #include <process.h>
+#include "GlobalSettings.h"
 #include "FadeThread.h"
+
+
+
+Multiplier multObMaster;
+Multiplier multObMasterIni;
+Multiplier multObMusic;
+Multiplier multObMusicIni;
+Multiplier multObEffects;
+Multiplier multObEffectsIni;
+Multiplier multObVoice;
+Multiplier multObVoiceIni;
+Multiplier multObFoot;
+Multiplier multObFootIni;
+MultipliersMap multipliersCustom;
+
 
 
 
@@ -29,20 +45,41 @@ void Multiplier::setValue (float newValue) {
 
 
 
-bool Multiplier::fadeVolume (float targetValue, float fadeTime) {
+bool Multiplier::setValueLimit (float newValue, float limit) {
+	if (isBetweenLimits(*value,limit,newValue,<=)) {
+		//If limit is beween *value and newValue, then we need to cross it (but we don't want to cross it, so...).
+		*value = limit;
+		return true;
+	} else {
+		*value = newValue;
+		return false;
+	}
+}
+
+
+
+void Multiplier::fadeVolume (float newTargetValue, float newFadeTime) {
 	//Assume the calling function waited for the mutex
 	startValue = *value;
-	Multiplier::targetValue = clamp(targetValue);
-	Multiplier::fadeTime = fadeTime;
-	if (!isFading) {
-		isFading = true;
-		_MESSAGE ("Command >> emcSetMusicVolume >> Begin fade thread");
-		_beginthread (FadeThread, 0, this);
-	} else {
+	targetValue = clamp (newTargetValue);
+	fadeTime = newFadeTime;
+	if (isFading) {
 		_MESSAGE ("Command >> emcSetMusicVolume >> Update fade thread");
-		isChanged = true;
+		if (startValue == targetValue) {
+			isFading = false;
+			setValue (targetValue);
+		} else {
+			isChanged = true;
+		}
+	} else {
+		if (startValue == targetValue) {
+			setValue (targetValue);
+		} else {
+			_MESSAGE ("Command >> emcSetMusicVolume >> Begin fade thread");
+			isFading = true;
+			_beginthread (FadeThread, 0, this);
+		}
 	}
-	return true;
 	//Assume the calling function will release the mutex
 }
 

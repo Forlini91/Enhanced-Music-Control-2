@@ -5,3 +5,5 @@
 struct MainGameVarsPointer {
 	MainGameVarsStruct *gameVars;
 };
+
+extern MainGameVarsPointer *mainGameVars;
