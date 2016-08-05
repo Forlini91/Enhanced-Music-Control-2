@@ -15,6 +15,10 @@ WaitForMultipleObjects (arraySize(handleSet,HANDLE), handleSet, 1, INFINITE);
 
 #define clamp(val,min,max) (val < min ? min : (val > max ? max : val))
 
+#define inConsole IsConsoleOpen () && IsConsoleMode ()
+
+#define Console_PrintC(x, ...) if(inConsole)Console_Print(x, __VA_ARGS__)
+
 
 
 //Quick code

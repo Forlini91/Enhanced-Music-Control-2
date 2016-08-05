@@ -13,7 +13,7 @@ class ThreadRequest {
 
 private:
 	//Set playlist
-	Playlist* Swap_Playlist = nullptr;				//The Playlist to set
+	Playlist *Swap_Playlist = nullptr;				//The Playlist to set
 	MusicType Swap_MusicType = Mt_NotKnown;			//MusicType is to be swapped
 	MusicType Swap_MusicType_Next = Mt_NotKnown;	//MusicType to be swapped after the delay
 	float Swap_Delay = 0;
@@ -56,7 +56,7 @@ public:
 
 	void requestResetPlaylist (MusicType musicType);
 
-	void requestPlayCustomTrack (string &track);
+	void requestPlayCustomTrack (Track track);
 	
 	bool requestHoldMusic (bool hold);
 

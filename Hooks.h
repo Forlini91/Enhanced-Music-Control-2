@@ -8,8 +8,8 @@
 
 
 
-int* streamSelectedType = new int (0);
-char* streamSelectedText = new char[200];
+int *streamSelectedType = new int (0);
+char *streamSelectedText = new char[200];
 //MusicType of the World (Explore, Public, or Dungeon)
 //MusicTypes currentWorldMusicType = NotKnown;
 MusicType *currentWorldMusicType = &music.world;

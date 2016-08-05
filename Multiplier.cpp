@@ -82,3 +82,8 @@ void Multiplier::fadeVolume (float newTargetValue, float newFadeTime) {
 	}
 	//Assume the calling function will release the mutex
 }
+
+volatile float Multiplier::operator<<(volatile float *var) {
+	value = var;
+	return *value;
+}

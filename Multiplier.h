@@ -42,9 +42,7 @@ public:
 
 	void fadeVolume (float targetValue, float fadeTime);
 
-	void operator<< (volatile float* var) {
-		value = var;
-	}
+	volatile float operator<< (volatile float *var);
 };
 
 

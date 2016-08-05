@@ -10,32 +10,32 @@ using namespace std;
 
 struct ActivePlaylist {
 
-	const char* name;							//Name of the playlist "slot"
+	const char *name;							//Name of the playlist "slot"
 	const MusicType musicType;					//Music type of this "slot"
 	const SpecialMusicType specialMusicType;	//SpecialMusicType of this "slot"
-	Playlist* playlist = nullptr;				//Current playlist associated to this "slot"
-	Playlist* defaultPlaylist = nullptr;		//Default playlist, used to restore
+	Playlist *playlist = nullptr;				//Current playlist associated to this "slot"
+	Playlist *defaultPlaylist = nullptr;		//Default playlist, used to restore
 
 
-	ActivePlaylist (const char* name, MusicType musicType, SpecialMusicType specialMusicType);
+	ActivePlaylist (const char *name, MusicType musicType, SpecialMusicType specialMusicType);
 
-	void initialize (int i, Playlist* defaultPlaylist);
+	void initialize (int i, Playlist *defaultPlaylist);
 	bool restorePlaylist ();
 
-	void operator= (Playlist* playlist);
-	void operator= (const ActivePlaylist& apl);
-	void operator= (const ActivePlaylist* apl);
+	void operator= (Playlist *playlist);
+	void operator= (const ActivePlaylist &apl);
+	void operator= (const ActivePlaylist *apl);
 	void operator+= (const string& path);
 
 };
 
 
 
-bool operator== (const ActivePlaylist& apl1, const ActivePlaylist& apl2);
-bool operator== (const ActivePlaylist& apl, const Playlist* playlist);
-bool operator== (const ActivePlaylist& apl, const Playlist* playlist);
-bool operator== (const Playlist* playlist, const ActivePlaylist& activePlaylist);
-bool operator== (const ActivePlaylist& apl, const Playlist& playlist);
+bool operator== (const ActivePlaylist &apl1, const ActivePlaylist &apl2);
+bool operator== (const ActivePlaylist &apl, const Playlist *playlist);
+bool operator== (const ActivePlaylist &apl, const Playlist *playlist);
+bool operator== (const Playlist *playlist, const ActivePlaylist &activePlaylist);
+bool operator== (const ActivePlaylist &apl, const Playlist &playlist);
 
 
 
@@ -51,11 +51,25 @@ extern ActivePlaylist* activePlaylists[8];		//All current active playlists
 
 
 
+
+
+//Check whatever a playlist with the given name is active
+extern bool isPlaylistActive (const char *playlistName);
+
+//Check whatever a playlist with the given name is active
+extern bool isPlaylistActive (string &playlistName);
+
 //Checks whatever the playlist is active
-extern bool isPlaylistActive (Playlist* playlist);
+extern bool isPlaylistActive (Playlist *playlist);
+
+//Returns the ActivePlaylist with the given playlist's name, if any, else returns nullptr
+extern ActivePlaylist* getActivePlaylist (const char *playlistName);
+
+//Returns the ActivePlaylist with the given playlist's name, if any, else returns nullptr
+extern ActivePlaylist* getActivePlaylist (string& playlistName);
 
 //Returns the ActivePlaylist with the given playlist, if any, else returns nullptr
-extern ActivePlaylist* getActivePlaylist (Playlist* playlist);
+extern ActivePlaylist* getActivePlaylist (Playlist *playlist);
 
 //Returns the ActivePlaylist with the given MusicType, if any
 extern ActivePlaylist* getActivePlaylist (MusicType musicType);

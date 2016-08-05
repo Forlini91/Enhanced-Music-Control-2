@@ -2,11 +2,11 @@
 
 
 
-ActivePlaylist::ActivePlaylist (const char* name, MusicType musicType, SpecialMusicType specialMusicType) : name (name), musicType (musicType), specialMusicType (specialMusicType) {}
+ActivePlaylist::ActivePlaylist (const char *name, MusicType musicType, SpecialMusicType specialMusicType) : name (name), musicType (musicType), specialMusicType (specialMusicType) {}
 
 
 
-void ActivePlaylist::initialize (int i, Playlist* vanillaPlaylist) {
+void ActivePlaylist::initialize (int i, Playlist *vanillaPlaylist) {
 	vanillaPlaylists[i] = defaultPlaylist = playlist = vanillaPlaylist;
 }
 
@@ -31,7 +31,7 @@ ActivePlaylist apl_Death ("Death", MusicType::Special, SpecialMusicType::Death);
 ActivePlaylist apl_Success ("Success", MusicType::Special, SpecialMusicType::Success);
 ActivePlaylist apl_Title ("Title", MusicType::Special, SpecialMusicType::Title);
 
-ActivePlaylist* activePlaylists[8] = {
+ActivePlaylist *activePlaylists[8] = {
 	&apl_Explore,
 	&apl_Public,
 	&apl_Dungeon,
@@ -44,37 +44,37 @@ ActivePlaylist* activePlaylists[8] = {
 
 
 
-void ActivePlaylist::operator= (Playlist* playlist) {
+void ActivePlaylist::operator= (Playlist *playlist) {
 	ActivePlaylist::playlist = playlist;
 }
 
-void ActivePlaylist::operator= (const ActivePlaylist& apl) {
+void ActivePlaylist::operator= (const ActivePlaylist &apl) {
 	ActivePlaylist::playlist = apl.playlist;
 }
 
-void ActivePlaylist::operator= (const ActivePlaylist* apl) {
+void ActivePlaylist::operator= (const ActivePlaylist *apl) {
 	ActivePlaylist::playlist = apl->playlist;
 }
 
-void ActivePlaylist::operator+= (const string& path) {
+void ActivePlaylist::operator+= (const string &path) {
 	playlist->addPath (path);
 }
 
 
 
-bool operator== (const ActivePlaylist& apl1, const ActivePlaylist& apl2) {
+bool operator== (const ActivePlaylist &apl1, const ActivePlaylist &apl2) {
 	return apl1.playlist == apl2.playlist;
 }
 
-bool operator== (const ActivePlaylist& apl, const Playlist* playlist) {
+bool operator== (const ActivePlaylist &apl, const Playlist *playlist) {
 	return apl.playlist == playlist;
 }
 
-bool operator== (const Playlist* playlist, const ActivePlaylist& apl) {
+bool operator== (const Playlist *playlist, const ActivePlaylist &apl) {
 	return apl.playlist == playlist;
 }
 
-bool operator== (const ActivePlaylist& apl, const Playlist& playlist) {
+bool operator== (const ActivePlaylist &apl, const Playlist &playlist) {
 	return *apl.playlist == playlist;
 }
 
@@ -87,7 +87,26 @@ bool operator== (const Playlist& playlist, const ActivePlaylist& apl) {
 
 
 
-bool isPlaylistActive (Playlist* playlist) {
+bool isPlaylistActive (const char *playlistName) {
+	if (playlistName[0] != '\0') {	//Not empty
+		for (ActivePlaylist* apl : activePlaylists) {
+			if (strcmp (playlistName, apl->playlist->name) != 0) {
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+
+
+bool isPlaylistActive (string &playlistName) {
+	return isPlaylistActive (playlistName.c_str ());
+}
+
+
+
+bool isPlaylistActive (Playlist *playlist) {
 	for (ActivePlaylist* apl : activePlaylists) {
 		if (playlist == apl->playlist) {
 			return true;
@@ -98,7 +117,26 @@ bool isPlaylistActive (Playlist* playlist) {
 
 
 
-ActivePlaylist* getActivePlaylist (Playlist* playlist) {
+ActivePlaylist* getActivePlaylist (const char *playlistName) {
+	if (playlistName[0] != '\0') {	//Not empty
+		for (ActivePlaylist* apl : activePlaylists) {
+			if (strcmp (playlistName, apl->playlist->name) != 0) {
+				return apl;
+			}
+		}
+	}
+	return nullptr;
+}
+
+
+
+ActivePlaylist* getActivePlaylist (string& playlistName) {
+	return getActivePlaylist(playlistName.c_str ());
+}
+
+
+
+ActivePlaylist* getActivePlaylist (Playlist *playlist) {
 	for (ActivePlaylist* apl : activePlaylists) {
 		if (playlist == apl->playlist) {
 			return apl;

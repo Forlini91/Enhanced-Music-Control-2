@@ -263,13 +263,13 @@ void MainThread_SelectNewTrack (float fadeOut, float fadeIn) {
 		}
 		if (threadState.activePlaylist != nullptr) {
 			Playlist* playlist = threadState.activePlaylist->playlist;
-			const char* trackPath = playlist->getNextTrack ().c_str();
-			_MESSAGE ("Play track from active %s playlist \"%s\" >> %s", threadState.activePlaylist->name, playlist->name, trackPath);
+			Track trackPath = playlist->getNextTrack ().c_str();
+			_MESSAGE ("Play track from active %s playlist \"%s\" >> %s", threadState.activePlaylist->name, playlist->name, trackPath.c_str());
 			if (musicPlayer.queueTrack (trackPath)) {
 				musicPlayer.playQueuedTrack (FadeMethod::fmFadeOutThenIn, fadeOut, fadeIn);
 				threadState.noTrack = false;
 				if (printNewTrack) {
-					Console_Print ("Now playing %s playlist \"%s\" >> %s", threadState.activePlaylist->name, playlist->name, trackPath);
+					Console_Print ("Now playing %s playlist \"%s\" >> %s", threadState.activePlaylist->name, playlist->name, trackPath.c_str ());
 				}
 			} else {
 				musicPlayer.stop (false, 1000);

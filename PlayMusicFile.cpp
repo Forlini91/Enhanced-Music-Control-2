@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <time.h>
+#include "Globals.h"
 #include "GameAPI.h"
 #include "ThreadRequest.h"
 #include "FilePath.h"
@@ -14,13 +15,13 @@ using namespace std;
 #define notDirectory(x) (x.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != FILE_ATTRIBUTE_DIRECTORY
 
 
-bool playMusicFile (const char* path) {
+bool playMusicFile (const char *path) {
 	return playMusicFile (string (path));
 }
 
 
 
-bool playMusicFile (const string& path) {
+bool playMusicFile (const string &path) {
 	string filePathC = cleanPath (path, true);
 	const char *charPath = filePathC.c_str ();
 
@@ -39,9 +40,7 @@ bool playMusicFile (const string& path) {
 		WIN32_FIND_DATAA findFileData;
 		hFind = FindFirstFileA (charPath, &findFileData);
 		if (hFind == INVALID_HANDLE_VALUE) {
-			if (IsConsoleOpen () && IsConsoleMode ()) {
-				Console_Print ("Play track >> No file match the given pattern: %s", path.c_str ());
-			}
+			Console_PrintC ("Play track >> No file match the given pattern: %s", path.c_str ());
 			_MESSAGE ("Command >> emcPlayTrack >> No file match the given pattern: %s", path.c_str ());
 			return false;
 		}
@@ -59,9 +58,7 @@ bool playMusicFile (const string& path) {
 		FindClose (hFind);
 
 		if (list.empty()) {		// "<=" just for sport!
-			if (IsConsoleOpen () && IsConsoleMode ()) {
-				Console_Print ("Play track >> No file match the given pattern: %s", path.c_str ());
-			}
+			Console_PrintC ("Play track >> No file match the given pattern: %s", path.c_str ());
 			_MESSAGE ("Command >> emcPlayTrack >> No file match the given pattern: %s", path.c_str ());
 			return false;
 		}
@@ -76,16 +73,12 @@ bool playMusicFile (const string& path) {
 	} else if (exists (filePathC)) {
 		filePathC = filePathC;
 	} else {
-		if (IsConsoleOpen () && IsConsoleMode ()) {
-			Console_Print ("Play track >> No such file exists: %s", path.c_str ());
-		}
+		Console_PrintC ("Play track >> No such file exists: %s", path.c_str ());
 		_MESSAGE ("Command >> emcPlayTrack >> No such file exists: %s", path.c_str ());
 		return false;
 	}
 
-	if (IsConsoleOpen () && IsConsoleMode ()) {
-		Console_Print ("Play track >> %s", filePathC.c_str ());
-	}
+	Console_PrintC ("Play track >> %s", filePathC.c_str ());
 	_MESSAGE ("Command >> emcPlayTrack >> %s", filePathC.c_str ());
 	threadRequest.requestPlayCustomTrack (filePathC);
 	return true;
@@ -93,7 +86,7 @@ bool playMusicFile (const string& path) {
 
 
 
-void parsePlayTrackCommand (const char* path) {
+void parsePlayTrackCommand (const char *path) {
 	if (_stricmp (path, "explore") == 0) {
 		playMusicFile (obExplorePath);
 	} else if (_stricmp (path, "public") == 0) {

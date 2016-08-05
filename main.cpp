@@ -50,9 +50,8 @@
 #include "ActivePlaylist.h"
 #include "Hooks.h"
 #include "EMC2INISettings.h"
-#include "IniData.h"
 #include "Commands.h"
-#include "ThreadRequest.h"
+#include "ThreadState.h"
 #include "MainThread.h"
 #include "OBSEInterfaces.h"
 
@@ -313,8 +312,6 @@ extern "C" {
 
 			iniSettings.Initialize (INI_PATH, nullptr);
 			iniSettings.applySettings ();
-			playlists.reserve (numPlaylists+1);
-			multipliersCustom.reserve (numMultipliers+1);
 
 			_MESSAGE ("Create default playlists");
 

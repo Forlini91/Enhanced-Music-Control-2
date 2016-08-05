@@ -3,7 +3,6 @@
 #include "CommandTable.h"
 #include "GameAPI.h"
 
-#define CONSOLE (IsConsoleOpen () && IsConsoleMode ())
 #define BUILD_IN_PLACE(key, ...) piecewise_construct, forward_as_tuple(key), forward_as_tuple(__VA_ARGS__) 
 #define EMPLACE_PLAYLIST(name,paths,randomOrder,vanillaPlaylist) playlists.emplace (BUILD_IN_PLACE(name, name, paths, randomOrder, vanillaPlaylist))
 #define EMPLACE_PLAYLIST_UNDEF(name,vanillaPlaylist) playlists.emplace (BUILD_IN_PLACE(name, name, vanillaPlaylist))
@@ -111,16 +110,17 @@ static CommandInfo kPlaylistExistsCommand = {
 //Required Input: 1 String
 //Returns 1 is the playlist is assigned to a MusicType, else 0.
 bool Cmd_IsPlaylistActive_Execute (COMMAND_ARGS);
-static ParamInfo kParams_IsPlaylistActive[1] = {
+static ParamInfo kParams_IsPlaylistActive[2] = {
 	{"playlist name", kParamType_String, 0},
+	{"music type", kParamType_Integer, 1}
 };
 static CommandInfo kIsPlaylistActiveCommand = {
 	"emcIsPlaylistActive",
 	"",
 	0,
-	"Returns 1 if the specified playlist is currently assigned to a MusicType, 0 otherwise.",
+	"Returns 1 if the specified playlist is currently assigned to any MusicType (or the specified music type, if given), 0 otherwise.",
 	0,
-	1,
+	2,
 	kParams_IsPlaylistActive,
 	Cmd_IsPlaylistActive_Execute
 };

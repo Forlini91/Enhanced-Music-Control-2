@@ -83,9 +83,3 @@ bool MusicState::checkOverride () {
 	}
 	return false;
 }
-
-
-
-bool isMusicTypeValid (int musicType) {
-	return musicType >= 0 && musicType <= 4;
-}

@@ -14,24 +14,24 @@ extern const string supportedExtensions[];
 
 
 
-bool exists (const string& path);
+bool exists (const string &path);
 
-bool isDirectory (const string& path);
+bool isDirectory (const string &path);
 
 bool isExtensionSupported (const string &path);
 
-string getFileName (const string& path);
+string getFileName (const string &path);
 
-string getFolderPath (const string& path);
+string getFolderPath (const string &path);
 
-string cleanPath (const string& path, bool relativize);
+string cleanPath (const string &path, bool relativize);
 
-string trim (const string& str);
+string trim (const string &str);
 
-bool endsWith (const string& str, const string& ending);
+bool endsWith (const string &str, const string &ending);
 
-bool endsWithAny (const string& str, const string endings[]);
+bool endsWithAny (const string &str, const string endings[]);
 
-bool endsNotWith (const string& str, const string& ending);
+bool endsNotWith (const string &str, const string &ending);
 
-bool endsNotWithAll (const string& str, const string endings[]);
+bool endsNotWithAll (const string &str, const string endings[]);

@@ -166,7 +166,7 @@ void ThreadRequest::requestResetPlaylist (MusicType musicType) {
 
 
 
-void ThreadRequest::requestPlayCustomTrack (string &track) {
+void ThreadRequest::requestPlayCustomTrack (Track track) {
 	LockHandle (hThreadMutex);
 		CustomTrack_Name = track;
 	UnlockHandle (hThreadMutex);

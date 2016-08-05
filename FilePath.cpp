@@ -36,7 +36,7 @@ string getFileName (const string &path) {
 }
 
 
-string getFolderPath (const string& path) {
+string getFolderPath (const string &path) {
 	size_t pos = path.find_last_of ('\\');
 	if (pos != string::npos) {
 		return path.substr (0, pos + 1);
@@ -46,7 +46,7 @@ string getFolderPath (const string& path) {
 }
 
 
-string cleanPath (const string& path, bool relativize) {
+string cleanPath (const string &path, bool relativize) {
 	string pathC = trim (path);
 	replace (pathC.begin (), pathC.end (), '/', '\\');
 	if (relativize && PathIsRelative (pathC.c_str ()) != 0) {
@@ -56,7 +56,7 @@ string cleanPath (const string& path, bool relativize) {
 }
 
 
-string trim (const string& str) {
+string trim (const string &str) {
 	size_t first = str.find_first_not_of (" \t\n\r");
 	if (first == string::npos)
 		return "";
@@ -65,7 +65,7 @@ string trim (const string& str) {
 }
 
 
-bool endsWith (const string& str, const string& ending) {
+bool endsWith (const string &str, const string &ending) {
 	int strLen = str.length ();
 	int endLen = ending.length ();
 	if (strLen >= endLen) {
@@ -77,7 +77,7 @@ bool endsWith (const string& str, const string& ending) {
 
 
 
-bool endsWithAny (const string& str, const string endings[]) {
+bool endsWithAny (const string &str, const string endings[]) {
 	for (int i = 0, n = arraySize (endings, string); i < n; i++) {
 		if (endsWith (str, endings[i])) {
 			return true;
@@ -88,7 +88,7 @@ bool endsWithAny (const string& str, const string endings[]) {
 
 
 
-bool endsNotWith (const string& str, const string& ending) {
+bool endsNotWith (const string &str, const string &ending) {
 	int strLen = str.length ();
 	int endLen = ending.length ();
 	if (strLen >= endLen) {

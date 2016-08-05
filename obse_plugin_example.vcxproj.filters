@@ -110,6 +110,9 @@
       <Filter>INI</Filter>
     </ClCompile>
     <ClCompile Include="OBSEInterfaces.cpp" />
+    <ClCompile Include="MusicType.cpp">
+      <Filter>GlobalStructsEnum</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\obse\obse\GameAPI.h">

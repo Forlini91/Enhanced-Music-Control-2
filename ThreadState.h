@@ -7,7 +7,7 @@
 struct ThreadState {
 
 	//The current playing playlist
-	ActivePlaylist* activePlaylist = nullptr;
+	ActivePlaylist *activePlaylist = nullptr;
 
 	//The new musicType.
 	MusicType newType = MusicType::Mt_NotKnown;
@@ -33,7 +33,7 @@ struct ThreadState {
 	//The last song played.
 	//When the music type changes the currently playing song will be stored here before a new one is queued up.
 	//This will allow us to resume the song later if we need to.
-	const char* lastPlayedSong = nullptr;
+	const char *lastPlayedSong = nullptr;
 
 	//The position of the song when it was stopped.
 	long lastPlayedPosition = 0;

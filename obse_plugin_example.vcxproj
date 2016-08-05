@@ -137,6 +137,7 @@ copy "$(TargetPath)" "C:\Bethesda Softworks\Nehrim\Data\OBSE\Plugins\$(TargetFil
     <ClCompile Include="EMC2INISettings.cpp" />
     <ClCompile Include="FadeThread.cpp" />
     <ClCompile Include="IniData.cpp" />
+    <ClCompile Include="MusicType.cpp" />
     <ClCompile Include="OBSEInterfaces.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MainGameVarsPointer.cpp" />

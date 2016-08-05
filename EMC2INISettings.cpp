@@ -2,6 +2,8 @@
 
 #include "Globals.h"
 #include "IniData.h"
+#include "Multiplier.h"
+#include "Playlist.h"
 
 
 EMC2INISettings iniSettings;
@@ -57,9 +59,12 @@ void EMC2INISettings::applySettings () {
 
 	val = kINIMaxNumMultipliers.GetData ().i;
 	numMultipliers = clamp (val, 0, 10000);
+	multipliersCustom.reserve (numMultipliers + 1);
 
 	val = kINIMaxNumPlaylists.GetData ().i;
 	numPlaylists = clamp (val, 0, 10000);
+	playlists.reserve (numPlaylists + 1);
+
 
 
 	//MusicPlayer

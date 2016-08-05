@@ -27,7 +27,6 @@ using namespace std;
 
 
 
-
 //No input
 //Returns the MusicType Oblivion wants to be played.
 bool Cmd_GetMusicType_Execute (COMMAND_ARGS) {
@@ -46,9 +45,7 @@ bool Cmd_GetMusicType_Execute (COMMAND_ARGS) {
 		}
 	UnlockHandle (hMusicStateMutex);
 
-	if (CONSOLE) {
-		Console_Print ("Current music type >> %.0f", *result);
-	}
+	Console_PrintC ("Current music type >> %.0f", *result);
 	return true;
 };
 
@@ -66,9 +63,7 @@ bool Cmd_SetMusicType_Execute (COMMAND_ARGS) {
 	}
 
 	if (musicType > 4) {
-		if (CONSOLE) {
-			Console_Print ("Set music type >> Failed: music type is not valid > Type: %d, Lock: %d", musicType, locked);
-		}
+		Console_PrintC ("Set music type >> Failed: music type is not valid > Type: %d, Lock: %d", musicType, locked);
 		_MESSAGE ("Command >> emcSetMusicType >> Failed: music type is not valid > Type: %d, Lock: %d", musicType, locked);
 		return true;
 	}
@@ -81,9 +76,7 @@ bool Cmd_SetMusicType_Execute (COMMAND_ARGS) {
 		}
 	UnlockHandle (hMusicStateMutex);
 
-	if (CONSOLE) {
-		Console_Print ("Set music type >> Type: %d, Lock: %d", musicType, locked);
-	}
+	Console_PrintC ("Set music type >> Type: %d, Lock: %d", musicType, locked);
 	_MESSAGE ("Command >> emcSetMusicType >> Type: %d, Lock: %d", musicType, locked);
 	*result = 1;
 	return true;
@@ -106,18 +99,14 @@ bool Cmd_CreatePlaylist_Execute (COMMAND_ARGS) {
 	}
 
 	if (strlen(pPlaylistName) <= 0) {	//Empty name. Can't proceed
-		if (CONSOLE) {
-			Console_Print ("Playlist manager >> Failed: Name is empty");
-		}
+		Console_PrintC ("Playlist manager >> Failed: Name is empty");
 		_MESSAGE ("Command >> emcCreatePlaylist >> Failed: Name is empty");
 		return true;
 	}
 
-	string paths = string (plPaths);
+	Paths paths = plPaths;
 	if (paths.empty ()) {				//Oh, wait, can't create a playlist without path
-		if (CONSOLE) {
-			Console_Print ("Playlist manager >> Failed: Path is empty");
-		}
+		Console_PrintC ("Playlist manager >> Failed: Path is empty");
 		_MESSAGE ("Command >> emcCreatePlaylist >> Failed: Path is empty for playlist \"%s\"", pPlaylistName);
 	}
 
@@ -126,16 +115,12 @@ bool Cmd_CreatePlaylist_Execute (COMMAND_ARGS) {
 			PlaylistEmplaceResult insResult = EMPLACE_PLAYLIST (pPlaylistName, paths, shuffle != 0, false);
 			if (insResult.second) {		//Create new playlist
 				if (playlists.size () >= numPlaylists) {
-					if (CONSOLE) {
-						Console_Print ("Playlist manager >> Failed: Max playlists limit reached: %d", numPlaylists);
-					}
+					Console_PrintC ("Playlist manager >> Failed: Max playlists limit reached: %d", numPlaylists);
 					_MESSAGE ("Command >> emcCreatePlaylist >> Failed: Max playlists limit reached: %d", numPlaylists);
 					playlists.erase (insResult.first);
 				} else {
 					*result = 1;
-					if (CONSOLE) {
-						Console_Print ("Create playlist >> Succeed (create)");
-					}
+					Console_PrintC ("Create playlist >> Succeed (create)");
 					_MESSAGE ("Command >> emcCreatePlaylist >> Succeed (create): \"%s\" >> %s", pPlaylistName, plPaths);
 				}
 			} else {		//Alter/Delete existing playlist
@@ -143,9 +128,7 @@ bool Cmd_CreatePlaylist_Execute (COMMAND_ARGS) {
 				Playlist* playlist = &it->second;
 				ActivePlaylist* activePlaylist = nullptr;
 				if (playlist->isVanilla ()) {						//Playlist is vanilla
-					if (CONSOLE) {
-						Console_Print ("Playlist manager >> Failed: This is a vanilla playlist and can't be altered");
-					}
+					Console_PrintC ("Playlist manager >> Failed: This is a vanilla playlist and can't be altered");
 					_MESSAGE ("Command >> emcCreatePlaylist >> Failed: \"%s\" is a vanilla playlist and can't be altered", pPlaylistName);
 				} else if (paths.empty ()) {	//Empty path -> erase playlist
 					while ((activePlaylist = getActivePlaylist (playlist)) != nullptr) {		//Playlist is assigned
@@ -156,28 +139,22 @@ bool Cmd_CreatePlaylist_Execute (COMMAND_ARGS) {
 					threadRequest.requestNextTrack (false);
 					*result = 1;
 				} else {						//Not empty path -> alter playlist
-					string currentTrack = playlist->getCurrentTrack ();
+					Track currentTrack = playlist->getCurrentTrack ();
 					if (playlist->setPaths (paths, shuffle != 0)) {		//If recreation succeed...
 						if (!currentTrack.empty () && isPlaylistActive (playlist)) {
 							playlist->restoreTrackPosition (currentTrack);
 						}
-						if (CONSOLE) {
-							Console_Print ("Recreate playlist >> Succeed (rebuild)");
-						}
+						Console_PrintC ("Recreate playlist >> Succeed (rebuild)");
 						_MESSAGE ("Command >> emcCreatePlaylist >> Succeed (rebuild): \"%s\" >> %s", pPlaylistName, plPaths);
 						*result = 1;
 					} else {					//Recreation failed
-						if (CONSOLE) {
-							Console_Print ("Recreate playlist >> Failed: No tracks found");
-						}
+						Console_PrintC ("Recreate playlist >> Failed: No tracks found");
 						_MESSAGE ("Command >> emcCreatePlaylist >> Failed: No tracks found");
 					}
 				}
 			}
 		} catch (exception e) {
-			if (CONSOLE) {
-				Console_Print ("Create playlist >> Failed: No track found.");
-			}
+			Console_PrintC ("Create playlist >> Failed: No track found.");
 			_MESSAGE ("Command >> emcCreatePlaylist >> Failed: No track found for playlist \"%s\" in %s", pPlaylistName, plPaths);
 		}
 	UnlockHandle (hPlaylistMutex);
@@ -205,50 +182,38 @@ bool Cmd_AddPathToPlaylist_Execute (COMMAND_ARGS) {
 	}
 
 	string playlistName = string (pPlaylistName);
-	string path = string (plPath);
+	Path path = plPath;
 	if (playlistName.empty ()) {	//Empty name. Can't proceed
-		if (CONSOLE) {
-			Console_Print ("Playlist manager >> Failed: Name is empty");
-		}
+		Console_PrintC ("Playlist manager >> Failed: Name is empty");
 		_MESSAGE ("Command >> emcAddPath >> Failed: Name is empty");
 		return true;
 	} else if (path.empty ()) {
-		if (CONSOLE) {
-			Console_Print ("Playlist manager >> Failed: Path is empty");
-		}
+		Console_PrintC ("Playlist manager >> Failed: Path is empty");
 		_MESSAGE ("Command >> emcAddPath >> Failed: Path is empty for playlist \"%s\"", pPlaylistName);
 		return true;
 	}
 
 	PlaylistsMap::iterator it = playlists.find (playlistName);
 	if (it == playlists.end ()) {
-		if (CONSOLE) {
-			Console_Print ("Add path >> Failed: Playlist does not exist");
-		}
+		Console_PrintC ("Add path >> Failed: Playlist does not exist");
 		_MESSAGE ("Command >> emcAddPath >> Failed: Playlist does not exist");
 	} else {
 		Playlist* playlist = &it->second;
 		//Make sure its not one of the default playlists.
 		if (playlist->isVanilla ()) {
-			if (CONSOLE) {
-				Console_Print ("Add path >> Failed: This is a vanilla playlist and can't be altered");
-			}
+			Console_PrintC ("Add path >> Failed: This is a vanilla playlist and can't be altered");
 			_MESSAGE ("Command >> emcAddPath >> Failed: \"%s\" is a vanilla playlist and can't be altered", pPlaylistName);
 		} else {
-			string currentTrack = playlist->getCurrentTrack ();
+			Track currentTrack = playlist->getCurrentTrack ();
 			if (playlist->addPath (path)) {		//Try to add the new path
 				if (!currentTrack.empty () && isPlaylistActive (playlist)) {
 					playlist->restoreTrackPosition (currentTrack);
 				}
-				if (CONSOLE) {
-					Console_Print ("Add path >> Succeed: Playlist updated", pPlaylistName, plPath);
-				}
+				Console_PrintC ("Add path >> Succeed: Playlist updated", pPlaylistName, plPath);
 				_MESSAGE ("Command >> emcAddPath >> Succeed: Playlist updated: \"%s\" >> %s", pPlaylistName, plPath);
 				*result = 1;
 			} else {			//Addition failed.
-				if (CONSOLE) {
-					Console_Print ("Add path >> Failed: No track found", pPlaylistName, plPath);
-				}
+				Console_PrintC ("Add path >> Failed: No track found", pPlaylistName, plPath);
 				_MESSAGE ("Command >> emcAddPath >> Failed: No track found for playlist \"%s\" in %s", pPlaylistName, plPath);
 			}
 		}
@@ -278,9 +243,7 @@ bool Cmd_PlaylistExists_Execute (COMMAND_ARGS) {
 			*result = 1;
 		}
 	}
-	if (CONSOLE) {
-		Console_Print ("Playlist exists >> %.0f", *result);
-	}
+	Console_PrintC ("Playlist exists >> %.0f", *result);
 	return true;
 }
 
@@ -296,25 +259,27 @@ bool Cmd_IsPlaylistActive_Execute (COMMAND_ARGS) {
 
 	//Parameters
 	char pPlaylistName[512];
-	if (!ExtractArgs (PASS_EXTRACT_ARGS, &pPlaylistName)) {
+	int musicType = -1;
+	if (!ExtractArgs (PASS_EXTRACT_ARGS, &pPlaylistName, &musicType)) {
 		return true;
 	}
-	string playlistName = string (pPlaylistName);
-	if (!playlistName.empty ()) {
-		PlaylistsMap::iterator it = playlists.find (playlistName);
-		if (it != playlists.end ()) {
-			Playlist* playlist = &it->second;
-			if (isPlaylistActive (playlist)) {
-				*result = 1;
-			}
-			if (CONSOLE) {
-				Console_Print ("Is playlist active >> %.0f", *result);
-			}
-			return true;
+
+	if (musicType < 0) {
+		if (isPlaylistActive (pPlaylistName)) {
+			*result = 1;
+			Console_PrintC ("Playlist is active");
+		} else {
+			Console_PrintC ("Playlist is not active");
 		}
-	}
-	if (CONSOLE) {
-		Console_Print ("Playlist doesn't exists");
+	} else if (musicType <= 4) {
+		if (strcmp (pPlaylistName, activePlaylists[musicType]->playlist->name) != 0) {
+			*result = 1;
+			Console_PrintC ("Playlist is assigned to music type %d", musicType);
+		} else {
+			Console_PrintC ("Playlist is not assigned to music type %d", musicType);
+		}
+	} else {
+		Console_PrintC ("Music type %d is not valid", musicType);
 	}
 	return true;
 }
@@ -344,15 +309,11 @@ bool Cmd_SetPlaylist_Execute (COMMAND_ARGS) {
 
 	string playlistName = string (pPlaylistName);
 	if (playlistName.empty ()) {
-		if (CONSOLE) {
-			Console_Print ("Set playlist >> Failed: Name is empty");
-		}
+		Console_PrintC ("Set playlist >> Failed: Name is empty");
 		_MESSAGE ("Command >> emcSetPlaylist >> Failed: Name is empty");
 		return true;
 	} else if (!isMusicTypeValid(pMusicType)) {
-		if (CONSOLE) {
-			Console_Print ("Set playlist >> Failed: Music type doesn't exists");
-		}
+		Console_PrintC ("Set playlist >> Failed: Music type doesn't exists");
 		_MESSAGE ("Command >> emcSetPlaylist >> Failed: Music type %d doesn't exists", pMusicType);
 		return true;
 	}
@@ -362,9 +323,7 @@ bool Cmd_SetPlaylist_Execute (COMMAND_ARGS) {
 	LockHandle (hPlaylistMutex);
 		PlaylistsMap::iterator it = playlists.find (playlistName);
 		if (it == playlists.end()) {
-			if (CONSOLE) {
-				Console_Print ("Set playlist >> Failed: Playlist does not exist: \"%s\"", pPlaylistName);
-			}
+			Console_PrintC ("Set playlist >> Failed: Playlist does not exist: \"%s\"", pPlaylistName);
 			_MESSAGE ("Command >> emcSetPlaylist >> Failed: Playlist does not exist: \"%s\"", pPlaylistName);
 			return true;
 		}
@@ -376,15 +335,11 @@ bool Cmd_SetPlaylist_Execute (COMMAND_ARGS) {
 		if (succeed) {
 			threadRequest.requestSetPlaylist (playlist, musicType, pQueueMode, pDelay);
 			apl->playlist = playlist;
-			if (CONSOLE) {
-				Console_Print ("Set playlist >> Succeed: Target: %d, Name: \"%s\", Mode: %d, Delay: %f", pMusicType, pPlaylistName, pQueueMode, pDelay);
-			}
+			Console_PrintC ("Set playlist >> Succeed: Target: %d, Name: \"%s\", Mode: %d, Delay: %f", pMusicType, pPlaylistName, pQueueMode, pDelay);
 			_MESSAGE ("Command >> emcSetPlaylist >> Succeed: Target: %d, Name: \"%s\", Mode: %d, Delay: %f", pMusicType, pPlaylistName, pQueueMode, pDelay);
 			*result = 1;
 		} else {
-			if (CONSOLE) {
-				Console_Print ("Set playlist >> Failed: Target: %d, Name: \"%s\", Mode: %d, Delay: %f", pMusicType, pPlaylistName, pQueueMode, pDelay);
-			}
+			Console_PrintC ("Set playlist >> Failed: Target: %d, Name: \"%s\", Mode: %d, Delay: %f", pMusicType, pPlaylistName, pQueueMode, pDelay);
 			_MESSAGE ("Command >> emcSetPlaylist >> Failed: Target: %d, Name: \"%s\", Mode: %d, Delay: %f", pMusicType, pPlaylistName, pQueueMode, pDelay);
 		}
 	UnlockHandle (hPlaylistMutex);
@@ -433,34 +388,24 @@ bool Cmd_RestorePlaylist_Execute (COMMAND_ARGS) {
 		if (restored) {
 			*result = 1;
 			threadRequest.requestResetPlaylist (MusicType::Undefined);
-			if (CONSOLE) {
-				Console_Print ("Restore playlist >> Succeed: All music types restored");
-			}
+			Console_PrintC ("Restore playlist >> Succeed: All music types restored");
 			_MESSAGE ("Command >> emcRestorePlaylist >> Succeed: All music types restored to default playlist");
 		} else {
-			if (CONSOLE) {
-				Console_Print ("Restore playlist >> Failed: All music types are already using their default playlists");
-			}
+			Console_PrintC ("Restore playlist >> Failed: All music types are already using their default playlists");
 			_MESSAGE ("Command >> emcRestorePlaylist >> Failed: All music types are already using their default playlists");
 		}
 	} else if (pMusicType <= 4) {
 		if (restorePlaylist (pMusicType)) {
 			*result = 1;
 			threadRequest.requestResetPlaylist (static_cast<MusicType>(pMusicType));
-			if (CONSOLE) {
-				Console_Print ("Restore playlist >> Succeed: Music type restored");
-			}
+			Console_PrintC ("Restore playlist >> Succeed: Music type restored");
 			_MESSAGE ("Command >> emcRestorePlaylist >> Succeed: Music type %d restored to default playlist", pMusicType);
 		} else {
-			if (CONSOLE) {
-				Console_Print ("Restore playlist >> Failed: Music type %d is already using the default playlist", pMusicType);
-			}
+			Console_PrintC ("Restore playlist >> Failed: Music type %d is already using the default playlist", pMusicType);
 			_MESSAGE ("Command >> emcRestorePlaylist >> Failed: Music type %d is already using the default playlist", pMusicType);
 		}
 	} else {
-		if (CONSOLE) {
-			Console_Print ("Restore playlist >> Failed: Invalid music type");
-		}
+		Console_PrintC ("Restore playlist >> Failed: Invalid music type");
 		_MESSAGE ("Command >> emcRestorePlaylist >> Failed: Invalid music type %d", pMusicType);
 	}
 	
@@ -474,9 +419,7 @@ bool Cmd_RestorePlaylist_Execute (COMMAND_ARGS) {
 
 bool Cmd_IsMusicSwitching_Execute (COMMAND_ARGS) {
 	*result = musicPlayer.isReady () ? 0 : 1;
-	if (CONSOLE) {
-		Console_Print ("Music switching >> %.0f", *result);
-	}
+	Console_PrintC ("Music switching >> %.0f", *result);
 	return true;
 }
 
@@ -491,7 +434,7 @@ bool Cmd_GetAllPlaylists_Execute (COMMAND_ARGS) {
 		return true;
 	}
 
-	bool console = CONSOLE;
+	bool console = inConsole;
 	const char* playlistName;
 	OBSEArray* newArray = g_arrayIntfc->CreateArray (nullptr, 0, scriptObj);
 	LockHandle (hPlaylistMutex);
@@ -526,9 +469,7 @@ bool Cmd_GetPlaylist_Execute (COMMAND_ARGS) {
 	}
 
 	if (pMusicType > 4) {
-		if (CONSOLE) {
-			Console_Print ("Invalid music type");
-		}
+		Console_PrintC ("Invalid music type");
 		return true;
 	}
 
@@ -541,13 +482,9 @@ bool Cmd_GetPlaylist_Execute (COMMAND_ARGS) {
 	if (activePlaylist != nullptr) {
 		const char* playlistName = activePlaylist->playlist->name;
 		g_stringIntfc->Assign (PASS_COMMAND_ARGS, playlistName);
-		if (CONSOLE) {
-			Console_Print ("Playlist >> %s", playlistName);
-		}
+		Console_PrintC ("Playlist >> %s", playlistName);
 	} else {
-		if (CONSOLE) {
-			Console_Print ("No playlist assigned to type %d", pMusicType);
-		}
+		Console_PrintC ("No playlist assigned to type %d", pMusicType);
 	}
 	return true;
 }
@@ -580,17 +517,15 @@ bool Cmd_GetPlaylistTracks_Execute (COMMAND_ARGS) {
 	}
 	if (playlist != nullptr) {
 		OBSEArray* newArray = g_arrayIntfc->CreateArray (nullptr, 0, scriptObj);
-		for (const string& track : playlist->getTracks ()) {
+		for (Track track : playlist->getTracks ()) {
 			g_arrayIntfc->AppendElement (newArray, track.c_str ());
 		}
 		g_arrayIntfc->AssignCommandResult (newArray, result);
-		if (CONSOLE) {
+		if (inConsole) {
 			playlist->printTracks ();
 		}
 	} else {
-		if (CONSOLE) {
-			Console_Print ("Playlist not found");
-		}
+		Console_PrintC ("Playlist not found");
 	}
 	UnlockHandle (hPlaylistMutex);
 	return true;
@@ -602,9 +537,7 @@ bool Cmd_GetPlaylistTracks_Execute (COMMAND_ARGS) {
 
 bool Cmd_GetTrackName_Execute (COMMAND_ARGS) {
 	const char* songPath = musicPlayer.getTrack ();
-	if (CONSOLE) {
-		Console_Print ("Currently track >> %s", songPath);
-	}
+	Console_PrintC ("Currently track >> %s", songPath);
 	g_stringIntfc->Assign (PASS_COMMAND_ARGS, songPath);
 	return true;
 }
@@ -615,9 +548,7 @@ bool Cmd_GetTrackName_Execute (COMMAND_ARGS) {
 
 bool Cmd_GetTrackDuration_Execute (COMMAND_ARGS) {
 	*result = musicPlayer.getTrackDuration () / ONCE_SECOND;
-	if (CONSOLE) {
-		Console_Print ("Track duration >> %f", *result);
-	}
+	Console_PrintC ("Track duration >> %f", *result);
 	return true;
 }
 
@@ -627,10 +558,8 @@ bool Cmd_GetTrackDuration_Execute (COMMAND_ARGS) {
 
 bool Cmd_GetTrackPosition_Execute (COMMAND_ARGS) {
 	*result = musicPlayer.getTrackPosition () / ONCE_SECOND;
-	if (CONSOLE) {
-		double duration = musicPlayer.getTrackDuration () / ONCE_SECOND;
-		Console_Print ("Track position >> %.0f / %.0f", *result, duration);
-	}
+	double duration = musicPlayer.getTrackDuration () / ONCE_SECOND;
+	Console_PrintC ("Track position >> %.0f / %.0f", *result, duration);
 	return true;
 }
 
@@ -659,9 +588,7 @@ bool Cmd_SetTrackPosition_Execute (COMMAND_ARGS) {
 
 	musicPlayer.setTrackPosition (true, pPosition, pFadeOut, pFadeIn);
 
-	if (CONSOLE) {
-		Console_Print ("Set track position >> Position %.2f, Fade out/in: %f/%f", pPosition, pFadeOut, pFadeIn);
-	}
+	Console_PrintC ("Set track position >> Position %.2f, Fade out/in: %f/%f", pPosition, pFadeOut, pFadeIn);
 	_MESSAGE ("Command >> emcSetTrackPosition >> Position %.2f, Fade out/in: %f/%f", pPosition, pFadeOut, pFadeIn);
 	*result = 1;
 	return true;
@@ -675,9 +602,7 @@ bool Cmd_SetTrackPosition_Execute (COMMAND_ARGS) {
 //Returns 1 if the override is active, else 0.
 bool Cmd_IsBattleOverridden_Execute (COMMAND_ARGS) {
 	*result = music.battleOverridden ? 1 : 0;
-	if (CONSOLE) {
-		Console_Print ("Battle overridde >> %.0f", *result);
-	}
+	Console_PrintC ("Battle overridde >> %.0f", *result);
 	return true;
 }
 
@@ -697,16 +622,12 @@ bool Cmd_SetBattleOverride_Execute (COMMAND_ARGS) {
 	bool battleOverrideBool = (battleOverride != 0);
 	LockHandle (hMusicStateMutex);
 		if (music.battleOverridden != battleOverrideBool) {
-			if (CONSOLE) {
-				Console_Print ("Set battle override >> %d", battleOverrideBool);
-			}
+			Console_PrintC ("Set battle override >> %d", battleOverrideBool);
 			_MESSAGE ("Command >> emcSetBattleOverride >> %d", battleOverrideBool);
 			music.battleOverridden = battleOverrideBool;
 			*result = 1;
 		} else {
-			if (CONSOLE) {
-				Console_Print ("Set battle override >> %d (unchanged)", battleOverrideBool);
-			}
+			Console_PrintC ("Set battle override >> %d (unchanged)", battleOverrideBool);
 			_MESSAGE ("Command >> emcSetBattleOverride >> %d (unchanged)", battleOverrideBool);
 		}
 	UnlockHandle (hMusicStateMutex);
@@ -719,9 +640,7 @@ bool Cmd_SetBattleOverride_Execute (COMMAND_ARGS) {
 
 bool Cmd_IsMusicOnHold_Execute (COMMAND_ARGS) {
 	*result = threadRequest.hasRequestedHoldMusic () ? 1 : 0;
-	if (CONSOLE) {
-		Console_Print ("Hold music >> %.0f", *result);
-	}
+	Console_PrintC ("Hold music >> %.0f", *result);
 	return true;
 }
 
@@ -738,15 +657,11 @@ bool Cmd_SetMusicHold_Execute (COMMAND_ARGS) {
 
 	bool holdMusic = (pHoldMusic != 0);
 	if (threadRequest.requestHoldMusic (holdMusic)) {
-		if (CONSOLE) {
-			Console_Print ("Set music hold >> %d", holdMusic);
-		}
+		Console_PrintC ("Set music hold >> %d", holdMusic);
 		_MESSAGE ("Command >> emcSetMusicHold >> %d", holdMusic);
 		*result = 1;
 	} else {
-		if (CONSOLE) {
-			Console_Print ("Set music hold >> %d (unchanged)", holdMusic);
-		}
+		Console_PrintC ("Set music hold >> %d (unchanged)", holdMusic);
 		_MESSAGE ("Command >> emcSetMusicHold >> %d (unchanged)", holdMusic);
 	}
 	return true;
@@ -773,9 +688,7 @@ bool Cmd_GetMasterVolume_Execute (COMMAND_ARGS) {
 			default: *result = mult->getValue ();
 		}
 	UnlockHandle (mult->hThread);
-	if (CONSOLE) {
-		Console_Print ("Master volume >> %f", *result);
-	}
+	Console_PrintC ("Master volume >> %f", *result);
 	return true;
 }
 
@@ -795,15 +708,11 @@ bool Cmd_SetMasterVolume_Execute (COMMAND_ARGS) {
 	Multiplier *mult = (method == 0) ? &multObMaster : &multObMasterIni;
 	LockHandle (mult->hThread);
 		if (fadeTime > 0) {
-			if (CONSOLE) {
-				Console_Print ("Set master volume >> Fade volume from %f to %f, Method: %d, Time: %f", mult->getValue (), volume, method, fadeTime);
-			}
+			Console_PrintC ("Set master volume >> Fade volume from %f to %f, Method: %d, Time: %f", mult->getValue (), volume, method, fadeTime);
 			_MESSAGE ("Command >> emcSetMasterVolume >> Fade volume from %f to %f, Method: %d, Time: %f", mult->getValue (), volume, method, fadeTime);
 			mult->fadeVolume (volume, fadeTime);
 		} else {
-			if (CONSOLE) {
-				Console_Print ("Set master volume >> Set volume from %f to %f", mult->getValue (), volume, method);
-			}
+			Console_PrintC ("Set master volume >> Set volume from %f to %f", mult->getValue (), volume, method);
 			_MESSAGE ("Command >> emcSetMasterVolume >> Set volume from %f to %f", mult->getValue (), volume, method);
 			mult->isFading = false;	//signal STOP to the thread running on this variable (if any)
 			mult->setValue (volume);
@@ -835,9 +744,7 @@ bool Cmd_GetMusicVolume_Execute (COMMAND_ARGS) {
 			mult = &pos->second;
 		} else {
 			*result = -1.0;
-			if (CONSOLE) {
-				Console_Print ("This multiplier doesn't exists");
-			}
+			Console_PrintC ("This multiplier doesn't exists");
 			return true;
 		}
 	}
@@ -853,9 +760,7 @@ bool Cmd_GetMusicVolume_Execute (COMMAND_ARGS) {
 		}
 	UnlockHandle (mult->hThread);
 
-	if (CONSOLE) {
-		Console_Print ("Music multiplier >> %f", *result);
-	}
+	Console_PrintC ("Music multiplier >> %f", *result);
 	return true;
 }
 
@@ -879,15 +784,11 @@ bool Cmd_SetMusicVolume_Execute (COMMAND_ARGS) {
 		mult = (method == 0) ? &multObMusic : &multObMusicIni;
 		LockHandle (mult->hThread);
 			if (fadeTime > 0) {
-				if (CONSOLE) {
-					Console_Print ("Set music volume >> Fade volume from %f to %f, Method: %d, Time: %f", mult->getValue (), volume, method, fadeTime);
-				}
+				Console_PrintC ("Set music volume >> Fade volume from %f to %f, Method: %d, Time: %f", mult->getValue (), volume, method, fadeTime);
 				_MESSAGE ("Command >> emcSetMusicVolume >> Fade volume from %f to %f, Method: %d, Time: %f", mult->getValue (), volume, method, fadeTime);
 				mult->fadeVolume (volume, fadeTime);
 			} else {
-				if (CONSOLE) {
-					Console_Print ("Set music volume >> Change volume from %f to %f, Method: %d", mult->getValue (), volume, method);
-				}
+				Console_PrintC ("Set music volume >> Change volume from %f to %f, Method: %d", mult->getValue (), volume, method);
 				_MESSAGE ("Command >> emcSetMusicVolume >> Change volume from %f to %f, Method: %d", mult->getValue (), volume, method);
 				mult->isFading = false;
 				mult->setValue (volume);
@@ -896,19 +797,15 @@ bool Cmd_SetMusicVolume_Execute (COMMAND_ARGS) {
 	} else {
 		string key = string (pKey);
 		if (key.empty ()) {
-			if (CONSOLE) {
-				Console_Print ("Set music volume >> Can't create/destroy a custom multiplier without a key");
-				return true;
-			}
+			Console_PrintC ("Set music volume >> Can't create/destroy a custom multiplier without a key");
+			return true;
 		}
 
 		_MESSAGE ("Command >> emcSetMusicVolume >> Method: %d, Key: %s", method, pKey);
 		if (volume == 1.0) {
 			MultipliersMap::iterator pos = multipliersCustom.find (key);
 			if (pos == multipliersCustom.end ()) {
-				if (CONSOLE) {
-					Console_Print ("Set music volume >> Can't create a new multiplier with volume 1.0");
-				}
+				Console_PrintC ("Set music volume >> Can't create a new multiplier with volume 1.0");
 				_MESSAGE ("Command >> emcSetMusicVolume >> Can't create a new multiplier with volume 1.0");
 				return true;
 			} else if (fadeTime <= 0) {
@@ -916,9 +813,7 @@ bool Cmd_SetMusicVolume_Execute (COMMAND_ARGS) {
 				LockHandle (mult->hThread);
 					mult->isDestroyed = true;
 				UnlockHandle (mult->hThread);
-				if (CONSOLE) {
-					Console_Print ("Set music volume >> Multiplier destroyed");
-				}
+				Console_PrintC ("Set music volume >> Multiplier destroyed");
 				_MESSAGE ("Command >> emcSetMusicVolume >> Multiplier destroyed");
 				*result = 1;
 				return true;
@@ -927,15 +822,11 @@ bool Cmd_SetMusicVolume_Execute (COMMAND_ARGS) {
 			MultiplierEmplaced insResult = multipliersCustom.emplace (BUILD_IN_PLACE (key, 1.0));
 			if (insResult.second) {
 				if (multipliersCustom.size () > numMultipliers) {
-					if (CONSOLE) {
-						Console_Print ("Set music volume >> Failed: Max multipliers limit reached: %d", numMultipliers);
-					}
+					Console_PrintC ("Set music volume >> Failed: Max multipliers limit reached: %d", numMultipliers);
 					_MESSAGE ("Command >> emcSetMusicVolume >> Failed: Max multipliers limit reached: %d", numMultipliers);
 					return true;
 				}
-				if (CONSOLE) {
-					Console_Print ("Set music volume >> Create new multiplier");
-				}
+				Console_PrintC ("Set music volume >> Create new multiplier");
 				_MESSAGE ("Command >> emcSetMusicVolume >> Create new multiplier");
 			}
 			mult = &insResult.first->second;
@@ -946,15 +837,11 @@ bool Cmd_SetMusicVolume_Execute (COMMAND_ARGS) {
 			mult->saveSession = (method == 4);
 			mult->isDestroyed = false;
 			if (fadeTime > 0) {
-				if (CONSOLE) {
-					_MESSAGE ("Set music volume >> Fade multiplier \"%s\" from %f to %f Time: %f", pKey, mult->getValue (), volume, fadeTime);
-				}
+				Console_PrintC ("Set music volume >> Fade multiplier \"%s\" from %f to %f Time: %f", pKey, mult->getValue (), volume, fadeTime);
 				_MESSAGE ("Command >> emcSetMusicVolume >> Fade multiplier \"%s\" from %f to %f Time: %f", pKey, mult->getValue (), volume, fadeTime);
 				mult->fadeVolume (volume, fadeTime);
 			} else {
-				if (CONSOLE) {
-					Console_Print ("Set music volume >> Set multiplier \"%s\" from %f to %f", pKey, mult->getValue (), volume);
-				}
+				Console_PrintC ("Set music volume >> Set multiplier \"%s\" from %f to %f", pKey, mult->getValue (), volume);
 				_MESSAGE ("Command >> emcSetMusicVolume >> Set multiplier \"%s\" from %f to %f", pKey, mult->getValue (), volume);
 				mult->isFading = false;		//signal STOP to the thread running on this multiplier (if any)
 				mult->setValue (volume);
@@ -988,9 +875,7 @@ bool Cmd_GetEffectsVolume_Execute (COMMAND_ARGS) {
 		}
 	UnlockHandle (mult->hThread);
 
-	if (CONSOLE) {
-		Console_Print ("Effects volume >> %f", *result);
-	}
+	Console_PrintC ("Effects volume >> %f", *result);
 	return true;
 }
 
@@ -1010,15 +895,11 @@ bool Cmd_SetEffectsVolume_Execute (COMMAND_ARGS) {
 	Multiplier *mult = (method == 0) ? &multObEffects : &multObEffectsIni;
 	LockHandle (mult->hThread);
 		if (fadeTime > 0) {
-			if (CONSOLE) {
-				Console_Print ("Set effects volume >> Fade volume from %f to %f, Method: %d, Time: %f", mult->getValue (), volume, method, fadeTime);
-			}
+			Console_PrintC ("Set effects volume >> Fade volume from %f to %f, Method: %d, Time: %f", mult->getValue (), volume, method, fadeTime);
 			_MESSAGE ("Command >> emcSetEffectsVolume >> Fade volume from %f to %f, Method: %d, Time: %f", mult->getValue (), volume, method, fadeTime);
 			mult->fadeVolume (volume, fadeTime);
 		} else {
-			if (CONSOLE) {
-				Console_Print ("Set effects volume >> Set volume from %f to %f, Method: %d", mult->getValue (), volume, method, fadeTime);
-			}
+			Console_PrintC ("Set effects volume >> Set volume from %f to %f, Method: %d", mult->getValue (), volume, method, fadeTime);
 			_MESSAGE ("Command >> emcSetEffectsVolume >> Set volume from %f to %f, Method: %d", mult->getValue (), volume, method, fadeTime);
 			mult->isFading = false;	//signal STOP to the thread running on this variable (if any)
 			mult->setValue (volume);
@@ -1051,9 +932,7 @@ bool Cmd_GetFootVolume_Execute (COMMAND_ARGS) {
 		}
 	UnlockHandle (mult->hThread);
 
-	if (CONSOLE) {
-		Console_Print ("Foot volume >> %f", *result);
-	}
+	Console_PrintC ("Foot volume >> %f", *result);
 	return true;
 }
 
@@ -1073,15 +952,11 @@ bool Cmd_SetFootVolume_Execute (COMMAND_ARGS) {
 	Multiplier *mult = (method == 0) ? &multObFoot : &multObFootIni;
 	LockHandle (mult->hThread);
 		if (fadeTime > 0) {
-			if (CONSOLE) {
-				Console_Print ("Set foot volume >> Fade volume from %f to %f, Method: %d, Time: %f", mult->getValue (), volume, method, fadeTime);
-			}
+			Console_PrintC ("Set foot volume >> Fade volume from %f to %f, Method: %d, Time: %f", mult->getValue (), volume, method, fadeTime);
 			_MESSAGE ("Command >> emcSetFootVolume >> Fade volume from %f to %f, Method: %d, Time: %f", mult->getValue (), volume, method, fadeTime);
 			mult->fadeVolume (volume, fadeTime);
 		} else {
-			if (CONSOLE) {
-				Console_Print ("Set foot volume >> Set volume from %f to %f, Method: %d", mult->getValue (), volume, method);
-			}
+			Console_PrintC ("Set foot volume >> Set volume from %f to %f, Method: %d", mult->getValue (), volume, method);
 			_MESSAGE ("Command >> emcSetFootVolume >> Set volume from %f to %f, Method: %d", mult->getValue (), volume, method);
 			mult->isFading = false;	//signal STOP to the thread running on this variable (if any)
 			mult->setValue (volume);
@@ -1114,9 +989,7 @@ bool Cmd_GetVoiceVolume_Execute (COMMAND_ARGS) {
 		}
 	UnlockHandle (mult->hThread);
 
-	if (CONSOLE) {
-		Console_Print ("Voice volume >> %f", *result);
-	}
+	Console_PrintC ("Voice volume >> %f", *result);
 	return true;
 }
 
@@ -1136,15 +1009,11 @@ bool Cmd_SetVoiceVolume_Execute (COMMAND_ARGS) {
 	Multiplier *mult = (method == 0) ? &multObVoice : &multObVoiceIni;
 	LockHandle (mult->hThread);
 		if (fadeTime > 0) {
-			if (CONSOLE) {
-				Console_Print ("Set voice volume >> Fade volume from %f to %f, Method: %d, Time: %f", mult->getValue (), volume, method, fadeTime);
-			}
+			Console_PrintC ("Set voice volume >> Fade volume from %f to %f, Method: %d, Time: %f", mult->getValue (), volume, method, fadeTime);
 			_MESSAGE ("Command >> emcSetVoiceVolume >> Fade volume from %f to %f, Method: %d, Time: %f", mult->getValue (), volume, method, fadeTime);
 			mult->fadeVolume (volume, fadeTime);
 		} else {
-			if (CONSOLE) {
-				Console_Print ("Set voice volume >> Set volume from %f to %f, Method: %d", mult->getValue (), volume, method);
-			}
+			Console_PrintC ("Set voice volume >> Set volume from %f to %f, Method: %d", mult->getValue (), volume, method);
 			_MESSAGE ("Command >> emcSetVoiceVolume >> Set volume from %f to %f, Method: %d", mult->getValue (), volume, method);
 			mult->isFading = false;	//signal STOP to the thread running on this variable (if any)
 			mult->setValue (volume);
@@ -1163,9 +1032,7 @@ bool Cmd_GetMusicSpeed_Execute (COMMAND_ARGS) {
 	LockHandle (hMusicPlayerMutex);
 		*result = musicPlayer.getMusicSpeed ();
 	UnlockHandle (hMusicPlayerMutex);
-	if (CONSOLE) {
-		Console_Print ("Music speed >> %f", *result);
-	}
+	Console_PrintC ("Music speed >> %f", *result);
 	return true;
 }
 
@@ -1191,9 +1058,7 @@ bool Cmd_SetMusicSpeed_Execute (COMMAND_ARGS) {
 		*result = 1;
 	}
 
-	if (CONSOLE) {
-		Console_Print ("Set music speed >> Speed: %f", speed);
-	}
+	Console_PrintC ("Set music speed >> Speed: %f", speed);
 	return true;
 }
 
@@ -1214,9 +1079,7 @@ bool Cmd_GetFadeTime_Execute (COMMAND_ARGS) {
 		*result = musicPlayer.getCurrentFadeOutLength () / 1000;
 	}
 
-	if (CONSOLE) {
-		Console_Print ("Fade time >> %f", *result);
-	}
+	Console_PrintC ("Fade time >> %f", *result);
 	return true;
 }
 
@@ -1240,17 +1103,13 @@ bool Cmd_SetFadeTime_Execute (COMMAND_ARGS) {
 			_MESSAGE ("Command >> emcSetFadeTime >> Fade In: %f", fadeTime);
 			*result = 1;
 		}
-		if (CONSOLE) {
-			Console_Print ("Set fade time >> Fade In: %f", fadeTime);
-		}
+		Console_PrintC ("Set fade time >> Fade In: %f", fadeTime);
 	} else {
 		if (musicPlayer.setCurrentFadeOutLength (true, fadeTime * 1000.0)) {
 			_MESSAGE ("Command >> emcSetFadeTime >> Fade Out: %f", fadeTime);
 			*result = 1;
 		}
-		if (CONSOLE) {
-			Console_Print ("Set fade time >> Fade Out: %f", fadeTime);
-		}
+		Console_PrintC ("Set fade time >> Fade Out: %f", fadeTime);
 	}
 	return true;
 }
@@ -1274,9 +1133,7 @@ bool Cmd_GetPauseTime_Execute (COMMAND_ARGS) {
 		}
 	UnlockHandle (hMusicPlayerMutex);
 
-	if (CONSOLE) {
-		Console_Print ("Pause time >> %f", *result);
-	}
+	Console_PrintC ("Pause time >> %f", *result);
 	return true;
 }
 
@@ -1309,9 +1166,7 @@ bool Cmd_SetPauseTime_Execute (COMMAND_ARGS) {
 		}
 	UnlockHandle (hMusicPlayerMutex);
 
-	if (CONSOLE) {
-		Console_Print ("Set pause time >> Min pause: %f, Extra pause: %f", pauseTime, extraPauseTime);
-	}
+	Console_PrintC ("Set pause time >> Min pause: %f, Extra pause: %f", pauseTime, extraPauseTime);
 	return true;
 }
 
@@ -1334,9 +1189,7 @@ bool Cmd_GetBattleDelay_Execute (COMMAND_ARGS) {
 		}
 	UnlockHandle (hMusicPlayerMutex);
 
-	if (CONSOLE) {
-		Console_Print ("Battle delay >> %f", *result);
-	}
+	Console_PrintC ("Battle delay >> %f", *result);
 	return true;
 }
 
@@ -1369,9 +1222,7 @@ bool Cmd_SetBattleDelay_Execute (COMMAND_ARGS) {
 		}
 	UnlockHandle (hMusicPlayerMutex);
 
-	if (CONSOLE) {
-		Console_Print ("Set battle delay >> Min delay: %f, Extra delay: %f", battleDelay, extraBattleDelay);
-	}
+	Console_PrintC ("Set battle delay >> Min delay: %f, Extra delay: %f", battleDelay, extraBattleDelay);
 	return true;
 }
 
@@ -1394,9 +1245,7 @@ bool Cmd_GetAfterBattleDelay_Execute (COMMAND_ARGS) {
 		}
 	UnlockHandle (hMusicPlayerMutex);
 
-	if (CONSOLE) {
-		Console_Print ("After battle delay >> %f", *result);
-	}
+	Console_PrintC ("After battle delay >> %f", *result);
 	return true;
 }
 
@@ -1429,9 +1278,7 @@ bool Cmd_SetAfterBattleDelay_Execute (COMMAND_ARGS) {
 		}
 	UnlockHandle (hMusicPlayerMutex);
 
-	if (CONSOLE) {
-		Console_Print ("Set after battle delay >> Min delay: %f, Extra delay: %f", afterBattleDelay, extraAfterBattleDelay);
-	}
+	Console_PrintC ("Set after battle delay >> Min delay: %f, Extra delay: %f", afterBattleDelay, extraAfterBattleDelay);
 	return true;
 }
 
@@ -1441,9 +1288,7 @@ bool Cmd_SetAfterBattleDelay_Execute (COMMAND_ARGS) {
 
 bool Cmd_GetMaxRestoreTime_Execute (COMMAND_ARGS) {
 	*result = musicPlayer.getMaxRestoreTime () / 1000;
-	if (CONSOLE) {
-		Console_Print ("Max music restore time >> %f", *result);
-	}
+	Console_PrintC ("Max music restore time >> %f", *result);
 	return true;
 }
 
@@ -1466,9 +1311,7 @@ bool Cmd_SetMaxRestoreTime_Execute (COMMAND_ARGS) {
 		*result = 1;
 	}
 
-	if (CONSOLE) {
-		Console_Print ("Set max restore time >> Restore: %f", restoreTime);
-	}
+	Console_PrintC ("Set max restore time >> Restore: %f", restoreTime);
 	return true;
 }
 
@@ -1508,15 +1351,11 @@ bool Cmd_MusicStop_Execute (COMMAND_ARGS) {
 
 	if (musicPlayer.stop (true, fadeOut)) {
 		fadeOut /= 1000;
-		if (CONSOLE) {
-			Console_Print ("Stop music >> Fade Out: %f", fadeOut);
-		}
+		Console_PrintC ("Stop music >> Fade Out: %f", fadeOut);
 		_MESSAGE ("Command >> emcMusicStop >> Fade Out: %f", fadeOut);
 		*result = 1;
 	} else {
-		if (CONSOLE) {
-			Console_Print ("Stop music >> Can't be stopped if not playing/paused!");
-		}
+		Console_PrintC ("Stop music >> Can't be stopped if not playing/paused!");
 		_MESSAGE ("Command >> emcMusicStop >> Can't be stopped if not playing/paused!");
 	}
 
@@ -1540,15 +1379,11 @@ bool Cmd_MusicPause_Execute (COMMAND_ARGS) {
 
 	if (musicPlayer.pause (true, fadeOut)) {
 		fadeOut /= 1000;
-		if (CONSOLE) {
-			Console_Print ("Pause music >> Fade Out: %f", fadeOut);
-		}
+		Console_PrintC ("Pause music >> Fade Out: %f", fadeOut);
 		_MESSAGE ("Command >> emcMusicPause >> Fade Out: %f", fadeOut);
 		*result = 1;
 	} else {
-		if (CONSOLE) {
-			Console_Print ("Pause music >> Can't be paused while not playing!");
-		}
+		Console_PrintC ("Pause music >> Can't be paused while not playing!");
 		_MESSAGE ("Command >> emcMusicPause >> Can't be paused while not playing!");
 	}
 
@@ -1572,15 +1407,11 @@ bool Cmd_MusicResume_Execute (COMMAND_ARGS) {
 
 	if (musicPlayer.resume (true, fadeIn)) {
 		fadeIn /= 1000;
-		if (CONSOLE) {
-			Console_Print ("Resume music >> Fade In: %f", fadeIn);
-		}
+		Console_PrintC ("Resume music >> Fade In: %f", fadeIn);
 		_MESSAGE ("Command >> emcMusicResume >> Fade In: %f", fadeIn);
 		*result = 1;
 	} else {
-		if (CONSOLE) {
-			Console_Print ("Resume music >> Can't resume if not paused");
-		}
+		Console_PrintC ("Resume music >> Can't resume if not paused");
 		_MESSAGE ("Command >> emcMusicResume >> Can't resume if not paused");
 	}
 
@@ -1610,9 +1441,7 @@ bool Cmd_MusicRestart_Execute (COMMAND_ARGS) {
 
 	fadeOut /= 1000;
 	fadeIn /= 1000;
-	if (CONSOLE) {
-		Console_Print ("Restart music >> Fade Out: %f | Fade In: %f | Was stopped: %d", fadeOut, fadeIn, *result);
-	}
+	Console_PrintC ("Restart music >> Fade Out: %f | Fade In: %f | Was stopped: %d", fadeOut, fadeIn, *result);
 	_MESSAGE ("Command >> emcMusicRestart >> Fade Out %f | Fade In: %f | Was stopped: %d", fadeOut, fadeIn, *result);
 	return true;
 }
@@ -1629,9 +1458,7 @@ bool Cmd_MusicNextTrack_Execute (COMMAND_ARGS) {
 	}
 
 	threadRequest.requestNextTrack (noHold != 0);
-	if (CONSOLE) {
-		Console_Print ("Next track requested!");
-	}
+	Console_PrintC ("Next track requested!");
 	_MESSAGE ("Command >> emcMusicNextTrack");
 	*result = 1;
 	return true;

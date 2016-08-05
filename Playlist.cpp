@@ -13,23 +13,23 @@ using namespace std;
 
 
 HANDLE hPlaylistMutex;		//"Playlist" Mutex.  Lock when reading/manipulating any of the playlists.
-Playlist* vanillaPlaylists[8];
+Playlist *vanillaPlaylists[8];
 PlaylistsMap playlists;
 const string emptyStr;
 
 
 
-Playlist::Playlist (const Playlist* copyFrom) : name(copyFrom->name), vanillaPlaylist (false) {
+Playlist::Playlist (const Playlist *copyFrom) : name(copyFrom->name), vanillaPlaylist (false) {
 	copyFrom->copyTo (this);
 }
 
 
 
-Playlist::Playlist (const char* name, bool vanillaPlaylist) : name (name), vanillaPlaylist (vanillaPlaylist) {}
+Playlist::Playlist (const char *name, bool vanillaPlaylist) : name (name), vanillaPlaylist (vanillaPlaylist) {}
 
 
 
-Playlist::Playlist (const char* name, const string& paths, bool randomOrder, bool vanillaPlaylist) : name (name), randomOrder (randomOrder), vanillaPlaylist (vanillaPlaylist) {
+Playlist::Playlist (const char *name, Paths paths, bool randomOrder, bool vanillaPlaylist) : name (name), randomOrder (randomOrder), vanillaPlaylist (vanillaPlaylist) {
 	if (setPaths (paths, randomOrder)) {
 		_MESSAGE ("Playlist: \"%s\" > Created succesfully", name);
 	} else if (vanillaPlaylist) {
@@ -42,7 +42,7 @@ Playlist::Playlist (const char* name, const string& paths, bool randomOrder, boo
 
 
 
-bool Playlist::setPaths (const string& paths, bool randomOrder) {
+bool Playlist::setPaths (Paths paths, bool randomOrder) {
 	Playlist backup = Playlist (this);
 	if (buildPaths (paths)) {
 		_MESSAGE ("Playlist: \"%s\" > New paths: \"%s\"", name, paths.c_str ());
@@ -61,7 +61,7 @@ bool Playlist::setPaths (const string& paths, bool randomOrder) {
 
 
 
-bool Playlist::addPath (const string& path) {
+bool Playlist::addPath (Path path) {
 	Playlist backup = Playlist(this);
 	_MESSAGE ("Playlist: \"%s\" > Add path: \"%s\"", name, path.c_str ());
 	if (buildPath (path, true)) {
@@ -91,7 +91,7 @@ int Playlist::size () const {
 
 
 
-const string& Playlist::getCurrentTrack () const {
+Track Playlist::getCurrentTrack () const {
 	if (initialized && curIndex >= 0) {
 		return tracks.at (curIndex);
 	} else {
@@ -101,7 +101,7 @@ const string& Playlist::getCurrentTrack () const {
 
 
 
-const string& Playlist::getNextTrack () {
+Track Playlist::getNextTrack () {
 	if (initialized) {
 		curIndex++;
 		if (curIndex >= tracks.size ()) {
@@ -116,8 +116,8 @@ const string& Playlist::getNextTrack () {
 
 
 
-bool Playlist::restoreTrackPosition (const string& trackName) {
-	TracksList::iterator pos = find (tracks.begin (), tracks.end (), trackName);
+bool Playlist::restoreTrackPosition (Track track) {
+	TracksList::iterator pos = find (tracks.begin (), tracks.end (), track);
 	if (pos != tracks.end ()) {
 		curIndex = distance (tracks.begin (), pos);
 		return true;
@@ -140,7 +140,7 @@ bool Playlist::isVanilla () const {
 
 
 
-void Playlist::copyTo (Playlist* copyTo) const {
+void Playlist::copyTo (Playlist *copyTo) const {
 	copyTo->paths = paths;
 	copyTo->randomOrder = randomOrder;
 	copyTo->tracks = tracks;
@@ -150,7 +150,7 @@ void Playlist::copyTo (Playlist* copyTo) const {
 
 
 
-void Playlist::moveTo (Playlist* moveTo) {
+void Playlist::moveTo (Playlist *moveTo) {
 	moveTo->paths = move (paths);
 	moveTo->randomOrder = randomOrder;
 	moveTo->tracks = move (tracks);
@@ -164,11 +164,11 @@ void Playlist::printTracks () const {
 	if (initialized) {
 		//s1 = Convert::ToString(name.GetBuffer()) + Convert::ToString("->Path  ") + Convert::ToString(TargetPath.GetStr().GetBuffer());
 		//Console_Print(s1.c_str());
-		for (const string& path : paths) {
+		for (Path path : paths) {
 			Console_Print ("Path: %s", path.c_str());
 		}
 		Console_Print ("Number of tracks: %d", (int)tracks.size ());
-		for (const string& track : tracks) {
+		for (Track track : tracks) {
 			Console_Print ("Track: %s", getFileName (track).c_str ());
 		}
 	} else {
@@ -182,7 +182,7 @@ void Playlist::printTracks () const {
 
 
 
-PathsList Playlist::tokenizePaths (const string& paths) const {
+PathsList Playlist::tokenizePaths (Paths paths) const {
 	PathsList pathVec;
 	int i = 0;
 	int j = 0;
@@ -212,13 +212,13 @@ void Playlist::sortTracks (bool updated) {
 
 
 
-bool Playlist::buildPaths (const string& pathList) {
+bool Playlist::buildPaths (Paths pathList) {
 	bool once = false;
 	tracks.clear ();
 	paths.clear ();
 	//The string may contains more than one path, separated by '>' or '|'.
 	PathsList pathsList = tokenizePaths (pathList);
-	for (string& path : pathsList) {
+	for (Paths path : pathsList) {
 		if (buildPath (path, false)) {
 			once = true;
 		}
@@ -230,7 +230,7 @@ bool Playlist::buildPaths (const string& pathList) {
 
 
 
-bool Playlist::buildPath (const string& path, bool add) {
+bool Playlist::buildPath (Path path, bool add) {
 
 	//This will make the path absolute in relation to Oblivion's main directory only if the path is currently relative, else it does nothing to the path.
 	string filePathC = cleanPath (path, true);
@@ -285,10 +285,10 @@ bool Playlist::buildPath (const string& path, bool add) {
 }
 
 
-bool Playlist::operator== (const Playlist& playlist) const {
+bool Playlist::operator== (const Playlist &playlist) const {
 	return name == playlist.name;
 }
 
-bool Playlist::operator== (const Playlist* playlist) const {
+bool Playlist::operator== (const Playlist *playlist) const {
 	return name == playlist->name;
 }
