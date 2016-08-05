@@ -1,8 +1,11 @@
 #include "MusicPlayer.h"
 
-#include "GlobalSettings.h"
+#include "Globals.h"
 #include "FilePath.h"
 
+
+#define VOLUME_MULT 2000.0
+const float minVolume = pow (2, ABSOLUTE_MINIMUM_VOLUME / VOLUME_MULT);
 
 using namespace std;
 
@@ -13,7 +16,7 @@ HANDLE hMusicPlayerMutex;	//Lock when using the object musicPlayer.
 
 
 
-bool QueuedTrack::get (string* name, REFERENCE_TIME* position) {
+bool QueuedTrack::get (string *name, REFERENCE_TIME *position) {
 	if (isQueued ()) {
 		*name = QueuedTrack::name;
 		*position = QueuedTrack::position;
@@ -34,23 +37,23 @@ bool QueuedTrack::isQueued () const {
 MusicPlayer::~MusicPlayer () {
 	if (pGraphBuilder) {
 		pGraphBuilder->Release ();
-		pGraphBuilder = NULL;
+		pGraphBuilder = nullptr;
 	}
 	if (pMediaControl) {
 		pMediaControl->Release ();
-		pMediaControl = NULL;
+		pMediaControl = nullptr;
 	}
 	if (pMediaSeeking) {
 		pMediaSeeking->Release ();
-		pMediaSeeking = NULL;
+		pMediaSeeking = nullptr;
 	}
 	if (pMediaEventEx) {
 		pMediaEventEx->Release ();
-		pMediaEventEx = NULL;
+		pMediaEventEx = nullptr;
 	}
 	if (pBasicAudio) {
 		pBasicAudio->Release ();
-		pBasicAudio = NULL;
+		pBasicAudio = nullptr;
 	}
 
 	CoUninitialize ();
@@ -82,7 +85,7 @@ bool MusicPlayer::hasPlayedOnce () const {
 
 
 const char* MusicPlayer::getErrorMessage () const {
-	return lastError.c_str();
+	return lastError;
 }
 
 
@@ -119,13 +122,13 @@ bool MusicPlayer::isQueuedUp () const {
 
 
 
-bool MusicPlayer::queueTrack (const string& trackName) {
+bool MusicPlayer::queueTrack (const string &trackName) {
 	return queueTrack (trackName, 0);
 }
 
 
 
-bool MusicPlayer::queueTrack (const string& trackName, REFERENCE_TIME position) {
+bool MusicPlayer::queueTrack (const string &trackName, REFERENCE_TIME position) {
 	if (isInitialized() && isReady()) {
 		//Queue up the track.  Since I don't want to be using the reference
 		//provided (as it may become invalid at a later time) I will create a
@@ -133,7 +136,7 @@ bool MusicPlayer::queueTrack (const string& trackName, REFERENCE_TIME position) 
 		if (trackName.empty ()) {
 			_MESSAGE ("MusicPlayer >> No track available");
 			return false;
-		} else if (exists (trackName) && !isDirectory (trackName) && endsWithAny (trackName, supportedExtensions)) {
+		} else if (exists (trackName) && !isDirectory (trackName) && isExtensionSupported (trackName)) {
 			double pos = position / ONCE_SECOND;
 			_MESSAGE ("MusicPlayer >> Queue new track >> %s (position: %.2f)", trackName.c_str(), pos);
 			queuedTrack = QueuedTrack (trackName, position);
@@ -188,7 +191,7 @@ bool MusicPlayer::playQueuedTrack (FadeMethod newFadeMethod, int FadeOutLength, 
 			size_t length = 0;
 			WCHAR wFileName[MAX_PATH];
 			mbstowcs_s (&length, wFileName, queuedTrackName.c_str (), MAX_PATH);	//Convert the filepath to wide characters.
-			HRESULT hr = pGraphBuilder->RenderFile (wFileName, NULL);	//Create the filter graph.
+			HRESULT hr = pGraphBuilder->RenderFile (wFileName, nullptr);	//Create the filter graph.
 			if (hr != S_OK) {
 				lastError = "MusicPlayer >> Failed to create the DShow Graph to render the file.";
 				state = PlayerState::psStopped;
@@ -203,7 +206,7 @@ bool MusicPlayer::playQueuedTrack (FadeMethod newFadeMethod, int FadeOutLength, 
 			} else {
 				trackPosition = 0;
 			}
-			pMediaSeeking->SetPositions (&trackPosition, AM_SEEKING_AbsolutePositioning, NULL, AM_SEEKING_NoPositioning);
+			pMediaSeeking->SetPositions (&trackPosition, AM_SEEKING_AbsolutePositioning, nullptr, AM_SEEKING_NoPositioning);
 
 			if (newFadeMethod == FadeMethod::fmFadeIn || newFadeMethod == FadeMethod::fmFadeOutThenIn) {
 				state = PlayerState::psFadingIn;
@@ -255,8 +258,9 @@ REFERENCE_TIME MusicPlayer::getTrackPosition () const {
 
 
 
-bool MusicPlayer::setTrackPosition (REFERENCE_TIME position, int fadeOut, int fadeIn) {
+bool MusicPlayer::setTrackPosition (bool lock, REFERENCE_TIME position, int fadeOut, int fadeIn) {
 	//Only stop if currently playing, paused, or stopped.
+	if (lock) LockHandle (hMusicPlayerMutex);
 	if (isInitialized() && hasPlayedOnce() && isReady()) {
 		fadeOutPeriod = fadeOut;
 		fadeInPeriod = fadeIn;
@@ -270,12 +274,14 @@ bool MusicPlayer::setTrackPosition (REFERENCE_TIME position, int fadeOut, int fa
 			//We can just resume.  Reset the position.
 			state = PlayerState::psPlaying;
 			task = PlayerTask::ptNone;
-			pMediaSeeking->SetPositions (&position, AM_SEEKING_AbsolutePositioning, NULL, AM_SEEKING_NoPositioning);
+			pMediaSeeking->SetPositions (&position, AM_SEEKING_AbsolutePositioning, nullptr, AM_SEEKING_NoPositioning);
 			pMediaControl->Run ();
 			pBasicAudio->put_Volume (maximumVolume);
 		}
+		if (lock) UnlockHandle (hMusicPlayerMutex);
 		return true;
 	}
+	if (lock) UnlockHandle (hMusicPlayerMutex);
 	return false;
 }
 
@@ -294,11 +300,14 @@ int MusicPlayer::getCurrentFadeInLength () const {
 
 
 
-bool MusicPlayer::setCurrentFadeInLength (int length) {
+bool MusicPlayer::setCurrentFadeInLength (bool lock, int length) {
+	if (lock) LockHandle (hMusicPlayerMutex);
 	if (currentFadeInLength != length) {
 		currentFadeInLength = length;
+		if (lock) UnlockHandle (hMusicPlayerMutex);
 		return true;
 	}
+	if (lock) UnlockHandle (hMusicPlayerMutex);
 	return false;
 }
 
@@ -310,11 +319,14 @@ int MusicPlayer::getCurrentFadeOutLength () const {
 
 
 
-bool MusicPlayer::setCurrentFadeOutLength (int length) {
+bool MusicPlayer::setCurrentFadeOutLength (bool lock, int length) {
+	if (lock) LockHandle (hMusicPlayerMutex);
 	if (currentFadeOutLength != length) {
 		currentFadeOutLength = length;
+		if (lock) UnlockHandle (hMusicPlayerMutex);
 		return true;
 	}
+	if (lock) UnlockHandle (hMusicPlayerMutex);
 	return false;
 }
 
@@ -326,11 +338,14 @@ int MusicPlayer::getMinPauseTime () const {
 
 
 
-bool MusicPlayer::setMinPauseTime (int length) {
+bool MusicPlayer::setMinPauseTime (bool lock, int length) {
+	if (lock) LockHandle (hMusicPlayerMutex);
 	if (minPauseTime != length) {
 		minPauseTime = length;
+		if (lock) UnlockHandle (hMusicPlayerMutex);
 		return true;
 	}
+	if (lock) UnlockHandle (hMusicPlayerMutex);
 	return false;
 }
 
@@ -342,11 +357,14 @@ int MusicPlayer::getExtraPauseTime () const {
 
 
 
-bool MusicPlayer::setExtraPauseTime (int length) {
+bool MusicPlayer::setExtraPauseTime (bool lock, int length) {
+	if (lock) LockHandle (hMusicPlayerMutex);
 	if (extraPauseTime != length) {
 		extraPauseTime = length;
+		if (lock) UnlockHandle (hMusicPlayerMutex);
 		return true;
 	}
+	if (lock) UnlockHandle (hMusicPlayerMutex);
 	return false;
 }
 
@@ -358,8 +376,10 @@ int MusicPlayer::getCalculatedPauseTime () const {
 
 
 
-void MusicPlayer::recalculatePauseTime () {
+void MusicPlayer::recalculatePauseTime (bool lock) {
+	if (lock) LockHandle (hMusicPlayerMutex);
 	calculatedPauseTime = minPauseTime + (extraPauseTime * rand () / RAND_MAX);
+	if (lock) UnlockHandle (hMusicPlayerMutex);
 }
 
 
@@ -370,11 +390,14 @@ int MusicPlayer::getMinBattleDelay () const {
 
 
 
-bool MusicPlayer::setMinBattleDelay (int length) {
+bool MusicPlayer::setMinBattleDelay (bool lock, int length) {
+	if (lock) LockHandle (hMusicPlayerMutex);
 	if (minBattleTime != length) {
 		minBattleTime = length;
+		if (lock) UnlockHandle (hMusicPlayerMutex);
 		return true;
 	}
+	if (lock) UnlockHandle (hMusicPlayerMutex);
 	return false;
 }
 
@@ -386,11 +409,14 @@ int MusicPlayer::getExtraBattleDelay () const {
 
 
 
-bool MusicPlayer::setExtraBattleDelay (int length) {
+bool MusicPlayer::setExtraBattleDelay (bool lock, int length) {
+	if (lock) LockHandle (hMusicPlayerMutex);
 	if (extraBattleTime != length) {
 		extraBattleTime = length;
+		if (lock) UnlockHandle (hMusicPlayerMutex);
 		return true;
 	}
+	if (lock) UnlockHandle (hMusicPlayerMutex);
 	return false;
 }
 
@@ -402,8 +428,10 @@ int MusicPlayer::getCalculatedBattleDelay () const {
 
 
 
-void MusicPlayer::recalculateBattleDelay () {
+void MusicPlayer::recalculateBattleDelay (bool lock) {
+	if (lock) LockHandle (hMusicPlayerMutex);
 	calculatedBattleTime = minBattleTime + (extraBattleTime * rand () / RAND_MAX);
+	if (lock) UnlockHandle (hMusicPlayerMutex);
 }
 
 
@@ -414,11 +442,14 @@ int MusicPlayer::getMinAfterBattleDelay () const {
 
 
 
-bool MusicPlayer::setMinAfterBattleDelay (int length) {
+bool MusicPlayer::setMinAfterBattleDelay (bool lock, int length) {
+	if (lock) LockHandle (hMusicPlayerMutex);
 	if (minAfterBattleTime != length) {
 		minAfterBattleTime = length;
+		if (lock) UnlockHandle (hMusicPlayerMutex);
 		return true;
 	}
+	if (lock) UnlockHandle (hMusicPlayerMutex);
 	return false;
 }
 
@@ -430,11 +461,14 @@ int MusicPlayer::getExtraAfterBattleDelay () const {
 
 
 
-bool MusicPlayer::setExtraAfterBattleDelay (int length) {
+bool MusicPlayer::setExtraAfterBattleDelay (bool lock, int length) {
+	if (lock) LockHandle (hMusicPlayerMutex);
 	if (extraAfterBattleTime != length) {
 		extraAfterBattleTime = length;
+		if (lock) UnlockHandle (hMusicPlayerMutex);
 		return true;
 	}
+	if (lock) UnlockHandle (hMusicPlayerMutex);
 	return false;
 }
 
@@ -446,8 +480,10 @@ int MusicPlayer::getCalculatedAfterBattleDelay () const {
 
 
 
-void MusicPlayer::recalculateAfterBattleDelay () {
+void MusicPlayer::recalculateAfterBattleDelay (bool lock) {
+	if (lock) LockHandle (hMusicPlayerMutex);
 	calculatedAfterBattleTime = minAfterBattleTime + (extraAfterBattleTime * rand () / RAND_MAX);
+	if (lock) UnlockHandle (hMusicPlayerMutex);
 }
 
 
@@ -458,28 +494,40 @@ int MusicPlayer::getMaxRestoreTime () const {
 
 
 
-bool MusicPlayer::setMaxRestoreTime (int length) {
+bool MusicPlayer::setMaxRestoreTime (bool lock, int length) {
+	if (lock) LockHandle (hMusicPlayerMutex);
 	if (maxMusicRestoreTime != length) {
 		maxMusicRestoreTime = length;
+		if (lock) UnlockHandle (hMusicPlayerMutex);
 		return true;
 	}
+	if (lock) UnlockHandle (hMusicPlayerMutex);
 	return false;
 }
 
 
 
-bool MusicPlayer::setMaxMusicVolume (long lVolume) {
-	if (isInitialized() && lVolume != maximumVolume) {
-		if (lVolume >= ABSOLUTE_MINIMUM_VOLUME && lVolume <= MAXIMUM_VOLUME) {
-			maximumVolume = lVolume;
+bool MusicPlayer::setMaxMusicVolume (float fVolume) {
+	if (isInitialized()) {
+		fVolume = clamp (fVolume, 0, 1);
+		long newMaximumVolume;
+		if (fVolume <= minVolume) {
+			newMaximumVolume = ABSOLUTE_MINIMUM_VOLUME;
+		} else if (fVolume >= 1) {
+			newMaximumVolume = MAXIMUM_VOLUME;
+		} else {
+			newMaximumVolume = VOLUME_MULT * log10 (fVolume);	//Volume is logarithmic.  This makes it linear.
+		}
+		if (maximumVolume != newMaximumVolume) {
+			maximumVolume = newMaximumVolume;
 			//If we aren't already adjusting the volume or the player's volume isn't at a critical point...
-			if (isReady() || state == PlayerState::psFadedIn) {
+			if (isReady () || state == PlayerState::psFadedIn) {
 				//...set the volume.
-				pBasicAudio->put_Volume (lVolume);
+				pBasicAudio->put_Volume (newMaximumVolume);
 			}
 			return true;
 		}
-		lastError = "MusicPlayer >> The provided volume was out of range (-10000 to 0).";
+		return false;
 	}
 	return false;
 }
@@ -494,13 +542,16 @@ double MusicPlayer::getMusicSpeed () const {
 
 
 
-bool MusicPlayer::setMusicSpeed (double speed) {
+bool MusicPlayer::setMusicSpeed (bool lock, double speed) {
+	if (lock) LockHandle (hMusicPlayerMutex);
 	double prev = 0;
 	pMediaSeeking->GetRate (&prev);
 	if (prev != speed) {
 		pMediaSeeking->SetRate (speed);
+		if (lock) UnlockHandle (hMusicPlayerMutex);
 		return true;
 	}
+	if (lock) UnlockHandle (hMusicPlayerMutex);
 	return false;
 }
 
@@ -508,7 +559,8 @@ bool MusicPlayer::setMusicSpeed (double speed) {
 
 
 
-bool MusicPlayer::resume (int fadeIn) {
+bool MusicPlayer::resume (bool lock, int fadeIn) {
+	if (lock) LockHandle (hMusicPlayerMutex);
 	if (isInitialized () && isPaused ()) {
 		if (fadeIn > 0) {
 			//We must fade back in.
@@ -525,14 +577,17 @@ bool MusicPlayer::resume (int fadeIn) {
 			pBasicAudio->put_Volume (maximumVolume);
 			pMediaControl->Run ();
 		}
+		if (lock) UnlockHandle (hMusicPlayerMutex);
 		return true;
 	}
+	if (lock) UnlockHandle (hMusicPlayerMutex);
 	return false;
 }
 
 
 
-bool MusicPlayer::pause (int fadeOut) {
+bool MusicPlayer::pause (bool lock, int fadeOut) {
+	if (lock) LockHandle (hMusicPlayerMutex);
 	if (isInitialized() && isPlaying()) {
 		if (fadeOut > 0) {
 			//We must fade to a pause.
@@ -546,38 +601,41 @@ bool MusicPlayer::pause (int fadeOut) {
 			state = PlayerState::psPaused;
 			task = PlayerTask::ptNone;
 		}
+		if (lock) UnlockHandle (hMusicPlayerMutex);
 		return true;
 	}
+	if (lock) UnlockHandle (hMusicPlayerMutex);
 	return false;
 }
 
 
 
-bool MusicPlayer::stop (int fadeOut) {
-	//Only stop if currently playing or paused.
-	if (initialized && (isPlaying() || isPaused())) {
+bool MusicPlayer::stop (bool lock, int fadeOut) {
+	if (lock) LockHandle (hMusicPlayerMutex);
+	if (isInitialized() && (isPlaying() || isPaused())) {
 		if (fadeOut > 0 && isPlaying()) {
 			//We must fade to a stop.
 			state = PlayerState::psFadingOut;
 			task = PlayerTask::ptStop;
 			fadeMethod = FadeMethod::fmFadeOut;
 			fadeOutPeriod = fadeOut;
-			return true;
 		} else {
 			//We can just stop.
 			pMediaControl->Stop ();
 			state = PlayerState::psStopped;
 			task = PlayerTask::ptNone;
 		}
+		if (lock) UnlockHandle (hMusicPlayerMutex);
 		return true;
 	}
+	if (lock) UnlockHandle (hMusicPlayerMutex);
 	return false;
 }
 
 
 
-bool MusicPlayer::restart (int fadeOut, int fadeIn) {
-	//Only stop if currently playing, paused, or stopped.
+bool MusicPlayer::restart (bool lock, int fadeOut, int fadeIn) {
+	if (lock) LockHandle (hMusicPlayerMutex);
 	if (isInitialized() && hasPlayedOnce() && isReady()) {
 		if (fadeOut > 0 && isPlaying()) {
 			//We must fade to a stop.
@@ -591,12 +649,14 @@ bool MusicPlayer::restart (int fadeOut, int fadeIn) {
 			state = PlayerState::psFadingIn;
 			task = PlayerTask::ptNone;
 			trackPosition = 0;
-			pMediaSeeking->SetPositions (&trackPosition, AM_SEEKING_AbsolutePositioning, NULL, AM_SEEKING_NoPositioning);
+			pMediaSeeking->SetPositions (&trackPosition, AM_SEEKING_AbsolutePositioning, nullptr, AM_SEEKING_NoPositioning);
 			pBasicAudio->put_Volume (maximumVolume);
 			pMediaControl->Run ();
 		}
+		if (lock) UnlockHandle (hMusicPlayerMutex);
 		return true;
 	}
+	if (lock) UnlockHandle (hMusicPlayerMutex);
 	return false;
 }
 
@@ -775,7 +835,7 @@ bool MusicPlayer::doTask () {
 				_MESSAGE ("MusicPlayer >> Play track >> \"%s\" (fade Out/In: %f/%f)", queuedTrackName.c_str (), fadeOutPeriod, fadeInPeriod);
 				WCHAR wFileName[MAX_PATH];
 				mbstowcs_s (&length, wFileName, queuedTrackName.c_str (), MAX_PATH);
-				hr = pGraphBuilder->RenderFile (wFileName, NULL);	//Create the filter graph.
+				hr = pGraphBuilder->RenderFile (wFileName, nullptr);	//Create the filter graph.
 				if (hr != S_OK) {
 					lastError = "MusicPlayer >> Failed to create the DShow Graph to render the file.";
 					state = PlayerState::psStopped;
@@ -784,7 +844,7 @@ bool MusicPlayer::doTask () {
 				}
 				//Get the duration of the current track and set the new position of the track.
 				pMediaSeeking->GetDuration (&trackDuration);
-				pMediaSeeking->SetPositions (&queuedTrackPosition, AM_SEEKING_AbsolutePositioning, NULL, AM_SEEKING_NoPositioning);
+				pMediaSeeking->SetPositions (&queuedTrackPosition, AM_SEEKING_AbsolutePositioning, nullptr, AM_SEEKING_NoPositioning);
 				if (fadeMethod == FadeMethod::fmFadeIn || fadeMethod == FadeMethod::fmFadeOutThenIn) {
 					_MESSAGE ("MusicPlayer >> Switch status: FadedOut -> FadingIn. task: Queue");
 					state = PlayerState::psFadingIn;
@@ -814,7 +874,7 @@ bool MusicPlayer::doTask () {
 				//This requires stopping the playback, resetting the position, and running it again.
 				trackPosition = 0;
 				pMediaControl->Stop ();
-				pMediaSeeking->SetPositions (&trackPosition, AM_SEEKING_AbsolutePositioning, NULL, AM_SEEKING_NoPositioning);
+				pMediaSeeking->SetPositions (&trackPosition, AM_SEEKING_AbsolutePositioning, nullptr, AM_SEEKING_NoPositioning);
 				pMediaControl->Run ();
 				state = PlayerState::psFadingIn;
 				task = PlayerTask::ptNone;
@@ -830,7 +890,7 @@ bool MusicPlayer::doTask () {
 				//Now we can change the track position.
 				//This requires stopping the playback, setting the position, and running it again.
 				pMediaControl->Stop ();
-				pMediaSeeking->SetPositions (&newTrackPosition, AM_SEEKING_AbsolutePositioning, NULL, AM_SEEKING_NoPositioning);
+				pMediaSeeking->SetPositions (&newTrackPosition, AM_SEEKING_AbsolutePositioning, nullptr, AM_SEEKING_NoPositioning);
 				pMediaControl->Run ();
 				newTrackPosition = 0;
 				state = PlayerState::psFadingIn;
@@ -866,14 +926,14 @@ PlayerState MusicPlayer::checkState () {
 
 bool MusicPlayer::initializeDShow (bool reset) {
 	//Get an instance of the graph builder.
-	HRESULT hr = CoCreateInstance (CLSID_FilterGraph, NULL, CLSCTX_INPROC_SERVER, IID_IGraphBuilder, (void**)&pGraphBuilder);
+	HRESULT hr = CoCreateInstance (CLSID_FilterGraph, nullptr, CLSCTX_INPROC_SERVER, IID_IGraphBuilder, (void**)&pGraphBuilder);
 	if (FAILED (hr) || !pGraphBuilder) {	//Check to see that the GraphBuilder is available.
 		switch (hr) {			//There was a problem.  Fail.
 			case REGDB_E_CLASSNOTREG:	lastError = "MusicPlayer >> Failed to create an instance of IGraphBuilder.  Class was not registered."; break;
 			case CLASS_E_NOAGGREGATION:	lastError = "MusicPlayer >> Failed to create an instance of IGraphBuilder.  This class cannot be created as part of an aggregate."; break;
 			case E_NOINTERFACE:			lastError = "MusicPlayer >> Failed to create an instance of IGraphBuilder.  There was a problem with the interface."; break;
 			case S_OK:					lastError = "MusicPlayer >> An instance of the interface was, supposedly, created...  But its null, which means it wasn't."; break;
-			default:					lastError = "MusicPlayer >> An unexpected error was thrown during the creation of the interface.  The pointer, for some reason, is just null.  Error Code:  " + to_string (hr); break;
+			default:					lastError = "MusicPlayer >> An unexpected error was thrown during the creation of the interface.  The pointer, for some reason, is just null."; break;
 		}
 		if (reset) forceKill ();
 		return false;

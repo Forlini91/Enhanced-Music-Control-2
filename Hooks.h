@@ -2,7 +2,7 @@
 
 
 #include <time.h>
-#include "GlobalSettings.h"
+#include "Globals.h"
 #include "MusicState.h"
 #include "PlayMusicFile.h"
 

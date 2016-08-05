@@ -18,6 +18,8 @@ bool exists (const string& path);
 
 bool isDirectory (const string& path);
 
+bool isExtensionSupported (const string &path);
+
 string getFileName (const string& path);
 
 string getFolderPath (const string& path);

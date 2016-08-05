@@ -1,7 +1,7 @@
 #include "FadeThread.h"
 
 #include <process.h>
-#include "GlobalSettings.h"
+#include "Globals.h"
 #include "Multiplier.h"
 #include "MainGameVarsPointer.h"
 

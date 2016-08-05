@@ -6,6 +6,22 @@ ActivePlaylist::ActivePlaylist (const char* name, MusicType musicType, SpecialMu
 
 
 
+void ActivePlaylist::initialize (int i, Playlist* vanillaPlaylist) {
+	vanillaPlaylists[i] = defaultPlaylist = playlist = vanillaPlaylist;
+}
+
+
+
+bool ActivePlaylist::restorePlaylist () {
+	if (playlist != defaultPlaylist) {
+		playlist = defaultPlaylist;
+		return true;
+	}
+	return false;
+}
+
+
+
 ActivePlaylist apl_Explore ("Explore", MusicType::Explore, SpecialMusicType::Sp_NotKnown);
 ActivePlaylist apl_Public ("Public", MusicType::Public, SpecialMusicType::Sp_NotKnown);
 ActivePlaylist apl_Dungeon ("Dungeon", MusicType::Dungeon, SpecialMusicType::Sp_NotKnown);
@@ -14,6 +30,7 @@ ActivePlaylist apl_Battle ("Battle", MusicType::Battle, SpecialMusicType::Sp_Not
 ActivePlaylist apl_Death ("Death", MusicType::Special, SpecialMusicType::Death);
 ActivePlaylist apl_Success ("Success", MusicType::Special, SpecialMusicType::Success);
 ActivePlaylist apl_Title ("Title", MusicType::Special, SpecialMusicType::Title);
+
 ActivePlaylist* activePlaylists[8] = {
 	&apl_Explore,
 	&apl_Public,
@@ -87,7 +104,7 @@ ActivePlaylist* getActivePlaylist (Playlist* playlist) {
 			return apl;
 		}
 	}
-	return NULL;
+	return nullptr;
 }
 
 
@@ -99,7 +116,7 @@ ActivePlaylist* getActivePlaylist (MusicType musicType) {
 		case MusicType::Dungeon: return &apl_Dungeon;
 		case MusicType::Custom: return &apl_Custom;
 		case MusicType::Battle: return &apl_Battle;
-		default: return NULL;
+		default: return nullptr;
 	}
 }
 
@@ -110,18 +127,13 @@ ActivePlaylist* getActivePlaylist (SpecialMusicType specialMusicType) {
 		case SpecialMusicType::Death: return &apl_Death;
 		case SpecialMusicType::Success: return &apl_Success;
 		case SpecialMusicType::Title: return &apl_Title;
-		default: return NULL;
+		default: return nullptr;
 	}
 }
 
 
 
 bool samePlaylist (MusicType musicType1, MusicType musicType2) {
-	if (musicType1 == musicType2) {
-		return true;
-	} else if (isMusicTypeValid (musicType1) && isMusicTypeValid (musicType2)) {
-		return getActivePlaylist (musicType1) == getActivePlaylist (musicType2);
-	} else {
-		return false;
-	}
+	return isMusicTypeValid (musicType1) && isMusicTypeValid (musicType2) &&
+		getActivePlaylist (musicType1)->playlist == getActivePlaylist (musicType2)->playlist;
 }

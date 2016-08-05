@@ -13,10 +13,14 @@ struct ActivePlaylist {
 	const char* name;							//Name of the playlist "slot"
 	const MusicType musicType;					//Music type of this "slot"
 	const SpecialMusicType specialMusicType;	//SpecialMusicType of this "slot"
-	Playlist* playlist = NULL;					//Current playlist associated to this "slot"
+	Playlist* playlist = nullptr;				//Current playlist associated to this "slot"
+	Playlist* defaultPlaylist = nullptr;		//Default playlist, used to restore
 
 
 	ActivePlaylist (const char* name, MusicType musicType, SpecialMusicType specialMusicType);
+
+	void initialize (int i, Playlist* defaultPlaylist);
+	bool restorePlaylist ();
 
 	void operator= (Playlist* playlist);
 	void operator= (const ActivePlaylist& apl);
@@ -46,10 +50,11 @@ extern ActivePlaylist apl_Title;		//The current active Title playlist
 extern ActivePlaylist* activePlaylists[8];		//All current active playlists
 
 
+
 //Checks whatever the playlist is active
 extern bool isPlaylistActive (Playlist* playlist);
 
-//Returns the ActivePlaylist with the given playlist, if any, else returns NULL
+//Returns the ActivePlaylist with the given playlist, if any, else returns nullptr
 extern ActivePlaylist* getActivePlaylist (Playlist* playlist);
 
 //Returns the ActivePlaylist with the given MusicType, if any
@@ -58,5 +63,5 @@ extern ActivePlaylist* getActivePlaylist (MusicType musicType);
 //Returns the ActivePlaylist with the given SpecialMusicType, if any
 extern ActivePlaylist* getActivePlaylist (SpecialMusicType specialMusicType);
 
-//Check whatever they are the same music type, or the associated active playlists are the same.
+//Check whatever these musicTypes are associated to the same playlist.
 extern bool samePlaylist (MusicType musicType1, MusicType musicType2);

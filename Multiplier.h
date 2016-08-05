@@ -27,7 +27,7 @@ public:
 	float startValue = 1;
 	float targetValue = 1;
 	float fadeTime = 0;
-	HANDLE hThread = CreateMutex (NULL, FALSE, NULL);
+	HANDLE hThread = CreateMutex (nullptr, FALSE, nullptr);
 	bool isFading = false;
 	bool isChanged = false;
 	bool isDestroyed = false;
@@ -41,8 +41,6 @@ public:
 	bool setValueLimit (float newValue, float limit);
 
 	void fadeVolume (float targetValue, float fadeTime);
-
-	float clamp (float volume);
 
 	void operator<< (volatile float* var) {
 		value = var;

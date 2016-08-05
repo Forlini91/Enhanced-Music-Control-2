@@ -9,59 +9,60 @@ using namespace std;
 
 
 
-extern HANDLE hThreadMutex;
-
-
-
 class ThreadRequest {
 
-public:
+private:
+	//Set playlist
+	Playlist* Swap_Playlist = nullptr;				//The Playlist to set
+	MusicType Swap_MusicType = Mt_NotKnown;			//MusicType is to be swapped
+	MusicType Swap_MusicType_Next = Mt_NotKnown;	//MusicType to be swapped after the delay
+	float Swap_Delay = 0;
+	float Swap_FadeIn = -1;
+	float Swap_FadeOut = -1;
 
-	//This variable specifies the name of the list to swap it with.
-	Playlist* Request_Playlist;
+	//Play custom track
+	string CustomTrack_Name;				//This variable specifies the name of the custom track to play.
 
-	//This variable specifies the name of the custom track to play.
-	string Request_Track;
+	bool PlayNextTrack = false;
 
-	//Set to true to request to play the next track.
-	bool Request_PlayNext = false;
+	bool HoldMusic;
 
-	//Set to true to request to play a custom track.
-	bool Request_PlayCustomTrack = false;
-
-	//This variable will indicate to which MusicType it should play next. 
-	//It will only perform the advance if
-	//Request_PlayNext_MusicType == newType, UNLESS Request_PlayNext_MusicType == MusicTypes::Undefined.
-	MusicType Request_PlayNext_MusicType = Mt_NotKnown;
-
-	//The following variables control the Playlist Swap system.
-	//If the ChangeMusic command is called with queueMode true,
-	//then the playlist may be queued up.  The next time the player
-	//is stopped, it will perform the swap then.
-
-	//This variable determines which MusicType is to be swapped.
-	//Setting to Mt_NotKnown indicates no swap is standing by.
-	MusicType Request_Swap_Type = Mt_NotKnown;
-	float Request_Swap_Delay = 0;
-	float Request_Swap_FadeIn = -1;
-	float Request_Swap_FadeOut = -1;
-
-	//If set to true, the sentry thread will not attempt to resume
-	//the music player from a stopped state until it is cleared.
-	bool Request_HoldMusic;
 
 
 public:
-	void requestSetPlaylist (Playlist* playlist, MusicType musicType, int queueMode, float delay);
+
+	bool hasRequests ();
+
+	bool hasRequestedSetPlaylist () const;
+
+	bool hasRequestedCustomTrack () const;
+	
+	bool hasRequestedHoldMusic () const;
+	
+	void getSwapData (Playlist **playlist, MusicType *musicType);
+
+	void getSwapFadeTimes (float *fadeIn, float *fadeOut);
+
+	bool checkDelayedSetPlaylist (int timePassed);
+
+	string getCustomTrack ();
+	
+	void cleanRequests ();
+
+
+
+
+	void requestSetPlaylist (Playlist *playlist, MusicType musicType, int queueMode, float delay);
 
 	void requestResetPlaylist (MusicType musicType);
 
-	void requestPlayCustomTrack (string& track);
+	void requestPlayCustomTrack (string &track);
 	
-	bool hasRequestedCustomTrack ();
+	bool requestHoldMusic (bool hold);
 
-	void requestHoldMusic (bool keepStopped);
+	void requestNextTrack (bool noHold);
 
 };
 
 extern ThreadRequest threadRequest;
+extern HANDLE hThreadMutex;

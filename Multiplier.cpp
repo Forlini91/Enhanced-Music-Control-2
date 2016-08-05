@@ -3,7 +3,7 @@
 
 
 #include <process.h>
-#include "GlobalSettings.h"
+#include "Globals.h"
 #include "FadeThread.h"
 
 
@@ -40,7 +40,7 @@ volatile float Multiplier::getValue () {
 
 
 void Multiplier::setValue (float newValue) {
-	*value = clamp(newValue);
+	*value = clamp(newValue, 0, 1);
 }
 
 
@@ -61,7 +61,7 @@ bool Multiplier::setValueLimit (float newValue, float limit) {
 void Multiplier::fadeVolume (float newTargetValue, float newFadeTime) {
 	//Assume the calling function waited for the mutex
 	startValue = *value;
-	targetValue = clamp (newTargetValue);
+	targetValue = clamp (newTargetValue, 0, 1);
 	fadeTime = newFadeTime;
 	if (isFading) {
 		_MESSAGE ("Command >> emcSetMusicVolume >> Update fade thread");
@@ -81,14 +81,4 @@ void Multiplier::fadeVolume (float newTargetValue, float newFadeTime) {
 		}
 	}
 	//Assume the calling function will release the mutex
-}
-
-float Multiplier::clamp (float value) {
-	if (value < 0) {
-		return 0;
-	} else if (value > 1) {
-		return 1;
-	} else {
-		return value;
-	}
 }

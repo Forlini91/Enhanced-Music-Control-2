@@ -176,7 +176,7 @@ static CommandInfo kIsMusicSwitchingCommand = {
 	"Return 1 if the music player is busy and can't recieve music altering commands, 0 otherwise.",
 	0,
 	0,
-	NULL,
+	nullptr,
 	Cmd_IsMusicSwitching_Execute
 };
 
@@ -241,7 +241,7 @@ static CommandInfo kGetTrackNameCommand = {
 	"Gets the name of the current track.",
 	0,
 	0,
-	NULL,
+	nullptr,
 	Cmd_GetTrackName_Execute
 };
 
@@ -255,7 +255,7 @@ static CommandInfo kGetTrackDurationCommand = {
 	"Gets the duration of the current playing track.",
 	0,
 	0,
-	NULL,
+	nullptr,
 	Cmd_GetTrackDuration_Execute
 };
 
@@ -269,7 +269,7 @@ static CommandInfo kGetTrackPositionCommand = {
 	"Gets the position of the current playing track.",
 	0,
 	0,
-	NULL,
+	nullptr,
 	Cmd_GetTrackPosition_Execute
 };
 
@@ -304,7 +304,7 @@ static CommandInfo kIsBattleOverriddenCommand = {
 	"Returns 1 if the battle music override is active, 0 otherwise.",
 	0,
 	0,
-	NULL,
+	nullptr,
 	Cmd_IsBattleOverridden_Execute
 };
 
@@ -339,7 +339,7 @@ static CommandInfo kIsMusicOnHoldCommand = {
 	"Returns 1 if the music player is currently on hold, 0 otherwise.",
 	0,
 	0,
-	NULL,
+	nullptr,
 	Cmd_IsMusicOnHold_Execute
 };
 
@@ -540,7 +540,7 @@ static CommandInfo kGetMusicSpeedCommand = {
 	"Get the music speed.",
 	0,
 	0,
-	NULL,
+	nullptr,
 	Cmd_GetMusicSpeed_Execute
 };
 
@@ -714,7 +714,7 @@ static CommandInfo kGetMaxRestoreTimeCommand = {
 	"Get how many seconds the player remember the previous playlist.",
 	0,
 	0,
-	NULL,
+	nullptr,
 	Cmd_GetMaxRestoreTime_Execute
 };
 

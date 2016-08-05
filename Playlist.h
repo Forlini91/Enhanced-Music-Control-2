@@ -13,6 +13,9 @@
 
 using namespace std;
 
+typedef vector<string> TracksList;
+typedef vector<string> PathsList;
+
 
 
 class Playlist {
@@ -21,11 +24,11 @@ private:
 
 	//The array containing the paths of the tracks in the list.
 	//Everytime curIndex cycles through the list, it will be reordered,
-	vector <string> tracks;
+	TracksList tracks;
 
 	//The directory containing the music, if we ever need it.
 	//nsPath::CPath TargetPath;
-	vector <string> paths;
+	TracksList paths;
 
 	//If true, tracks are shuffled on creation/recreation/repeat, else they always maintain the starting order
 	bool randomOrder;
@@ -43,7 +46,7 @@ private:
 
 
 	//Tokenizes the path.
-	vector<string> tokenizePaths (const string& path) const;
+	PathsList tokenizePaths (const string& path) const;
 
 	//Randomly reorders the playlist, guaranteeing that the last played song
 	//will not come first in the playlist.
@@ -76,7 +79,7 @@ public:
 	bool addPath (const string& path);
 
 	//Gets all tracks in the playlist
-	const vector<string>& Playlist::getTracks () const;
+	const TracksList& Playlist::getTracks () const;
 
 	//Number of tracks in the playlist
 	int size () const;
@@ -87,16 +90,20 @@ public:
 	//Return true if this is a vanilla playlist (and so, it can't be altered).
 	bool isVanilla () const;
 
-	//Advances the playlist by one, and returns a (const char *) pointing to the
-	//file path.
-	const string next ();
+	//Returns the current track. Return the first track if there's still no current track.
+	const string& getCurrentTrack () const;
 
-	//Returns the current song.  If there is no current song, it advances the
-	//track by one so there IS a song.
-	const string current ();
+	//Advances the playlist by one, and returns the next track
+	const string& getNextTrack ();
 
-	//Createsa  copy of the current playlist into the Target.
+	//Search the given track in the playlist and restore the playlist indexes.
+	bool restoreTrackPosition (const string& trackName);
+
+	//Copy this playlist data to the target playlist.
 	void copyTo (Playlist *copyTo) const;
+
+	//Move this playlist data to the target playlist
+	void moveTo (Playlist *copyTo);
 
 	void printTracks () const;
 

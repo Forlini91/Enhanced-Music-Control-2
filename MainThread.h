@@ -8,43 +8,40 @@
 
 using namespace std;
 
-extern volatile bool *bMusicEnabled;
-extern volatile float *iniMasterVolume;
-extern volatile float *iniMusicVolume;
 
 
-
-
-
+//This is the main thread body
+void MainThread (void *throwaway);
 
 void MainThread_DelayedInitialization ();
 
-void MainThread_ResetStartBattleTimer ();
+//This function updates musicPlayer's volume with the volume from Oblivion and the multipliers.
+//This ensures that the player can use Oblivion's audio controls to control the music.
+void MainThread_SyncMusicVolume ();
 
-void MainThread_ResetBattleTimer ();
+void MainThread_SetPlaylist ();
 
-void MainThread_ResetAfterBattleTimer ();
-
-void MainThread_ResetPauseTimer ();
-
-//This is a function to be used by sentry Thread.
-//It updates musicPlayer's volume with the volume from Oblivion.
-//This ensures that the player can use Oblivion's audio controls
-//to control the music.
-void MainThread_SyncMusicVolume (void);
-
-bool MainThread_SwapPlaylist ();
-
-void MainThread_StorePreviousTrack (bool PlayerIsPlaying);
 
 bool MainThread_FixLevelUp (bool PlayerIsPlaying);
 
+void MainThread_SelectNewTrack (float fadeOut, float fadeIn);
+
 void MainThread_SelectCustomTrack ();
+
+void MainThread_StorePreviousTrack (bool PlayerIsPlaying);
 
 void MainThread_RestorePreviousTrack ();
 
-void MainThread_SelectNewTrack (float fadeOut, float fadeIn);
-
 void MainThread_UpdateMusicType (bool newTypeBattle);
 
-void MainThread (void *throwaway);
+
+
+
+void MainThread_ResetBattleTimer ();
+
+void MainThread_ResetBattleDelayTimer ();
+
+void MainThread_ResetAfterBattleDelayTimer ();
+
+void MainThread_ResetPauseTimer ();
+

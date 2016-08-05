@@ -13,11 +13,11 @@
     <Filter Include="Threads">
       <UniqueIdentifier>{013e467e-1983-49db-ac5e-890658e0b464}</UniqueIdentifier>
     </Filter>
-    <Filter Include="StructsEnum">
-      <UniqueIdentifier>{fc2fddbd-3a59-4760-8ee8-ff6a49b0476f}</UniqueIdentifier>
-    </Filter>
     <Filter Include="MusicPlayer">
       <UniqueIdentifier>{3c7bda1e-ba45-4710-a20c-721827cb4749}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="GlobalStructsEnum">
+      <UniqueIdentifier>{fc2fddbd-3a59-4760-8ee8-ff6a49b0476f}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -88,7 +88,7 @@
       <Filter>Threads</Filter>
     </ClCompile>
     <ClCompile Include="MainGameVarsPointer.cpp">
-      <Filter>StructsEnum</Filter>
+      <Filter>GlobalStructsEnum</Filter>
     </ClCompile>
     <ClCompile Include="ThreadState.cpp">
       <Filter>Threads</Filter>
@@ -106,6 +106,10 @@
     <ClCompile Include="PlayMusicFile.cpp">
       <Filter>MusicPlayer</Filter>
     </ClCompile>
+    <ClCompile Include="IniData.cpp">
+      <Filter>INI</Filter>
+    </ClCompile>
+    <ClCompile Include="OBSEInterfaces.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\obse\obse\GameAPI.h">
@@ -183,16 +187,16 @@
       <Filter>Threads</Filter>
     </ClInclude>
     <ClInclude Include="MainGameVarsPointer.h">
-      <Filter>StructsEnum</Filter>
+      <Filter>GlobalStructsEnum</Filter>
     </ClInclude>
     <ClInclude Include="MainGameVarsStruct.h">
-      <Filter>StructsEnum</Filter>
+      <Filter>GlobalStructsEnum</Filter>
     </ClInclude>
     <ClInclude Include="SoundStruct.h">
-      <Filter>StructsEnum</Filter>
+      <Filter>GlobalStructsEnum</Filter>
     </ClInclude>
     <ClInclude Include="MusicType.h">
-      <Filter>StructsEnum</Filter>
+      <Filter>GlobalStructsEnum</Filter>
     </ClInclude>
     <ClInclude Include="Playlist.h" />
     <ClInclude Include="EMC2INISettings.h">
@@ -204,10 +208,7 @@
     <ClInclude Include="Multiplier.h" />
     <ClInclude Include="FilePath.h" />
     <ClInclude Include="VanillaPlaylistData.h">
-      <Filter>StructsEnum</Filter>
-    </ClInclude>
-    <ClInclude Include="GlobalSettings.h">
-      <Filter>StructsEnum</Filter>
+      <Filter>GlobalStructsEnum</Filter>
     </ClInclude>
     <ClInclude Include="ActivePlaylist.h" />
     <ClInclude Include="SME_Prefix.h">
@@ -218,6 +219,13 @@
     </ClInclude>
     <ClInclude Include="PlayMusicFile.h">
       <Filter>MusicPlayer</Filter>
+    </ClInclude>
+    <ClInclude Include="IniData.h">
+      <Filter>INI</Filter>
+    </ClInclude>
+    <ClInclude Include="OBSEInterfaces.h" />
+    <ClInclude Include="Globals.h">
+      <Filter>GlobalStructsEnum</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

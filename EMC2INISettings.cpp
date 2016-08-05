@@ -1,17 +1,20 @@
 #include "EMC2INISettings.h"
 
-#include "GlobalSettings.h"
-
+#include "Globals.h"
+#include "IniData.h"
 
 
 EMC2INISettings iniSettings;
 
 
-void EMC2INISettings::Initialize (const char* INIPath, void* Parameter) {
+using namespace std;
+
+
+void EMC2INISettings::Initialize (const char *INIPath, void *Parameter) {
 	this->INIFilePath = INIPath;
 	_MESSAGE ("INI Path: %s", INIPath);
 
-	std::fstream INIStream (INIPath, std::fstream::in);
+	fstream INIStream (INIPath, fstream::in);
 	bool CreateINI = false;
 	if (INIStream.fail ()) {
 		_MESSAGE ("INI File not found; Creating one...");
@@ -20,19 +23,21 @@ void EMC2INISettings::Initialize (const char* INIPath, void* Parameter) {
 	INIStream.close ();
 	INIStream.clear ();
 
+	RegisterSetting (&kINIDelayTitleMusicEnd);
+	RegisterSetting (&kINIMaxNumMultipliers);
+	RegisterSetting (&kINIMaxNumPlaylists);
 	RegisterSetting (&kINIMusicSpeed);
-	RegisterSetting (&kINIFadeOut);
-	RegisterSetting (&kINIFadeIn);
-	RegisterSetting (&kINITrackPause);
+	RegisterSetting (&kINITrackPauseMin);
 	RegisterSetting (&kINITrackPauseExtra);
-	RegisterSetting (&kINIBattleMusicStartDelay);
+	RegisterSetting (&kINIBattleMusicStartDelayMin);
 	RegisterSetting (&kINIBattleMusicStartDelayExtra);
-	RegisterSetting (&kINIBattleMusicEndDelay);
+	RegisterSetting (&kINIBattleMusicEndDelayMin);
 	RegisterSetting (&kINIBattleMusicEndDelayExtra);
 	RegisterSetting (&kINIPreviousTrackRemember);
-	RegisterSetting (&kINIDelayTitleMusicEnd);
-	RegisterSetting (&kINIMaxNumPlaylists);
-	RegisterSetting (&kINIMaxNumMultipliers);
+	RegisterSetting (&kINIFadeOut);
+	RegisterSetting (&kINIFadeIn);
+	RegisterSetting (&kINIFadeInBattle);
+	RegisterSetting (&kINIFadeOutBattle);
 	RegisterSetting (&kINIPrintTrack);
 
 	if (CreateINI)
@@ -43,70 +48,75 @@ void EMC2INISettings::Initialize (const char* INIPath, void* Parameter) {
 
 
 
-void EMC2INISettings::applySettings (bool &delayTitleMusicEnd, bool &printNewTrack, int &numPlaylists, int &numMultipliers) {
+void EMC2INISettings::applySettings () {
 	_MESSAGE ("Initialization >> EMC2 ini data");
 	float val;
 
-	val = kINIMusicSpeed.GetData ().f;
-	if (isBetween (val, 0, 100)) {
-		musicPlayer.setMusicSpeed ((double)val);
-	}
-
-	val = kINIFadeOut.GetData ().f;
-	if (isBetween (val, 0, 9999)) {
-		musicPlayer.setCurrentFadeOutLength (val * 1000);
-	}
-
-	val = kINIFadeIn.GetData ().f;
-	if (isBetween (val, 0, 9999)) {
-		musicPlayer.setCurrentFadeInLength (val * 1000);
-	}
-
-	val = kINITrackPause.GetData ().f;
-	if (isBetween (val, 0, 9999)) {
-		musicPlayer.setMinPauseTime (val * 1000);
-	}
-
-	val = kINITrackPauseExtra.GetData ().f;
-	if (isBetween (val, 0, 9999)) {
-		musicPlayer.setExtraPauseTime (val * 1000);
-	}
-
-	val = kINIBattleMusicStartDelay.GetData ().f;
-	if (isBetween (val, 0, 9999)) {
-		musicPlayer.setMinBattleDelay (val * 1000);
-	}
-
-	val = kINIBattleMusicStartDelayExtra.GetData ().f;
-	if (isBetween (val, 0, 9999)) {
-		musicPlayer.setExtraBattleDelay ((double)val * 1000);
-	}
-
-	val = kINIBattleMusicEndDelay.GetData ().f;
-	if (isBetween (val, 0, 9999)) {
-		musicPlayer.setMinAfterBattleDelay ((double)val * 1000);
-	}
-
-	val = kINIBattleMusicEndDelayExtra.GetData ().f;
-	if (isBetween (val, 0, 9999)) {
-		musicPlayer.setExtraAfterBattleDelay ((double)val * 1000);
-	}
-
-	val = kINIBattleMusicEndDelayExtra.GetData ().f;
-	if (isBetween (val, 0, 9999)) {
-		musicPlayer.setExtraAfterBattleDelay ((double)val * 1000);
-	}
-
-	val = kINIPreviousTrackRemember.GetData ().f;
-	if (isBetween (val, 0, 9999)) {
-		musicPlayer.setMaxRestoreTime ((double)val * 1000);
-	}
-
+	//General
 	delayTitleMusicEnd = (kINIDelayTitleMusicEnd.GetData ().i > 0);
 
+	val = kINIMaxNumMultipliers.GetData ().i;
+	numMultipliers = clamp (val, 0, 10000);
+
+	val = kINIMaxNumPlaylists.GetData ().i;
+	numPlaylists = clamp (val, 0, 10000);
+
+
+	//MusicPlayer
+	val = kINIMusicSpeed.GetData ().f;
+	val = clamp (val, 0, 100);
+	musicPlayer.setMusicSpeed (false, (double)val);
+
+	val = kINITrackPauseMin.GetData ().f;
+	val = clamp (val, 0, 100000);
+	musicPlayer.setMinPauseTime (false, val * 1000);
+
+	val = kINITrackPauseExtra.GetData ().f;
+	val = clamp (val, 0, 100000);
+	musicPlayer.setExtraPauseTime (false, val * 1000);
+
+	val = kINIBattleMusicStartDelayMin.GetData ().f;
+	val = clamp (val, 0, 100000);
+	musicPlayer.setMinBattleDelay (false, val * 1000);
+
+	val = kINIBattleMusicStartDelayExtra.GetData ().f;
+	val = clamp (val, 0, 100000);
+	musicPlayer.setExtraBattleDelay (false, val * 1000);
+
+	val = kINIBattleMusicEndDelayMin.GetData ().f;
+	val = clamp (val, 0, 100000);
+	musicPlayer.setMinAfterBattleDelay (false, val * 1000);
+
+	val = kINIBattleMusicEndDelayExtra.GetData ().f;
+	val = clamp (val, 0, 100000);
+	musicPlayer.setExtraAfterBattleDelay (false, val * 1000);
+
+	val = kINIBattleMusicEndDelayExtra.GetData ().f;
+	val = clamp (val, 0, 100000);
+	musicPlayer.setExtraAfterBattleDelay (false, val * 1000);
+
+	val = kINIPreviousTrackRemember.GetData ().f;
+	val = clamp (val, 0, 100000);
+	musicPlayer.setMaxRestoreTime (false, val * 1000);
+
+
+	//Fade
+	val = kINIFadeOut.GetData ().f;
+	val = clamp (val, 0, 100000);
+	musicPlayer.setCurrentFadeOutLength (false, val * 1000);
+
+	val = kINIFadeIn.GetData ().f;
+	val = clamp (val, 0, 100000);
+	musicPlayer.setCurrentFadeInLength (false, val * 1000);
+
+	val = kINIFadeOutBattle.GetData ().f;
+	fadeInBattle = clamp (val, 0, 100000) * 1000;
+
+	val = kINIFadeInBattle.GetData ().f;
+	fadeOutBattle = clamp (val, 0, 100000) * 1000;
+
+
+	//Notification
 	printNewTrack = (kINIPrintTrack.GetData ().i > 0);
 
-	numPlaylists = kINIMaxNumPlaylists.GetData ().i;
-
-	numMultipliers = kINIMaxNumMultipliers.GetData ().i;
 }

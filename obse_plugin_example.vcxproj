@@ -136,6 +136,8 @@ copy "$(TargetPath)" "C:\Bethesda Softworks\Nehrim\Data\OBSE\Plugins\$(TargetFil
     </ClCompile>
     <ClCompile Include="EMC2INISettings.cpp" />
     <ClCompile Include="FadeThread.cpp" />
+    <ClCompile Include="IniData.cpp" />
+    <ClCompile Include="OBSEInterfaces.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MainGameVarsPointer.cpp" />
     <ClCompile Include="MainThread.cpp" />
@@ -172,14 +174,16 @@ copy "$(TargetPath)" "C:\Bethesda Softworks\Nehrim\Data\OBSE\Plugins\$(TargetFil
     <ClInclude Include="EMC2INISettings.h" />
     <ClInclude Include="FadeThread.h" />
     <ClInclude Include="FilePath.h" />
-    <ClInclude Include="GlobalSettings.h" />
+    <ClInclude Include="Globals.h" />
     <ClInclude Include="ActivePlaylist.h" />
     <ClInclude Include="Hooks.h" />
+    <ClInclude Include="IniData.h" />
     <ClInclude Include="INIManager.h" />
     <ClInclude Include="MainGameVarsPointer.h" />
     <ClInclude Include="MainGameVarsStruct.h" />
     <ClInclude Include="MainThread.h" />
     <ClInclude Include="Multiplier.h" />
+    <ClInclude Include="OBSEInterfaces.h" />
     <ClInclude Include="SME_Prefix.h" />
     <ClInclude Include="VanillaPlaylistData.h" />
     <ClInclude Include="MusicPlayer.h" />

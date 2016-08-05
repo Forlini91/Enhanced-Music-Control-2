@@ -11,7 +11,7 @@
 
 
 using namespace std;
-
+#define notDirectory(x) (x.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != FILE_ATTRIBUTE_DIRECTORY
 
 
 bool playMusicFile (const char* path) {
@@ -36,8 +36,8 @@ bool playMusicFile (const string& path) {
 
 	if (strchr (charPath, '*') || strchr (charPath, '?')) {
 		HANDLE hFind = INVALID_HANDLE_VALUE;
-		WIN32_FIND_DATAA FindFileData;
-		hFind = FindFirstFileA (charPath, &FindFileData);
+		WIN32_FIND_DATAA findFileData;
+		hFind = FindFirstFileA (charPath, &findFileData);
 		if (hFind == INVALID_HANDLE_VALUE) {
 			if (IsConsoleOpen () && IsConsoleMode ()) {
 				Console_Print ("Play track >> No file match the given pattern: %s", path.c_str ());
@@ -46,19 +46,16 @@ bool playMusicFile (const string& path) {
 			return false;
 		}
 
+		string fileName;
 		string folderPathC = getFolderPath (filePathC);
 		vector <string> list;
-		do {
-			string fileName = FindFileData.cFileName;
-			if (fileName == ".." || (FindFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY) {
-				continue;
-			} else if (endsNotWithAll (fileName, supportedExtensions)) {
-				continue;
-			}
 
-			fileName = cleanPath (fileName, false);
-			list.push_back (folderPathC + fileName);
-		} while (FindNextFileA (hFind, &FindFileData) != 0);
+		do {
+			fileName = findFileData.cFileName;
+			if (fileName != ".." && notDirectory(findFileData) && isExtensionSupported (fileName)) {
+				list.push_back (folderPathC + cleanPath (fileName, false));
+			}
+		} while (FindNextFileA (hFind, &findFileData) != 0);
 		FindClose (hFind);
 
 		if (list.empty()) {		// "<=" just for sport!
@@ -71,7 +68,7 @@ bool playMusicFile (const string& path) {
 
 		int queueSize = list.size ();
 		if (queueSize > 1) {
-			srand ((unsigned)time (NULL));
+			srand ((unsigned)time (nullptr));
 			filePathC = list.at (rand () % queueSize);
 		} else {
 			filePathC = list.at (0);
@@ -106,7 +103,7 @@ void parsePlayTrackCommand (const char* path) {
 	} else if (_stricmp (path, "battle") == 0) {
 		playMusicFile (obBattlePath);
 	} else if (_stricmp (path, "random") == 0) {
-		srand ((unsigned)time (NULL));
+		srand ((unsigned)time (nullptr));
 		switch (rand () % 4) {
 			case 0: playMusicFile (obExplorePath); break;
 			case 1: playMusicFile (obPublicPath); break;

@@ -5,7 +5,7 @@
 
 #include "GameAPI.h"
 
-#include "GlobalSettings.h"
+#include "Globals.h"
 #include "VanillaPlaylistData.h"
 #include "MainGameVarsPointer.h"
 #include "OblivionINI.h"
@@ -16,17 +16,13 @@
 #include "ActivePlaylist.h"
 #include "ThreadState.h"
 #include "ThreadRequest.h"
+#include "IniData.h"
 
 
 
 using namespace std;
 
 
-volatile bool *bMusicEnabled = INI::Audio::bMusicEnabled;
-volatile float *iniMasterVolume = INI::Audio::fDefaultMasterVolume;
-volatile float *iniMusicVolume = INI::Audio::fDefaultMusicVolume;
-extern bool printNewTrack;
-extern bool delayTitleMusicEnd;
 
 
 
@@ -51,16 +47,6 @@ void MainThread_DelayedInitialization () {
 
 
 
-void MainThread_ResetStartBattleTimer () {
-	if (threadState.startBattleTimer > 0) {
-		_MESSAGE ("Thread >> Reset BattleDelay at %.0f ms", threadState.startBattleTimer);
-		threadState.startBattleTimer = 0;
-		musicPlayer.recalculateBattleDelay ();
-	}
-}
-
-
-
 void MainThread_ResetBattleTimer () {
 	if (threadState.battleTimer > 0 && threadState.newType != MusicType::Battle) {
 		_MESSAGE ("Thread >> Total battle duration: %.0f ms.", threadState.battleTimer);
@@ -70,11 +56,21 @@ void MainThread_ResetBattleTimer () {
 
 
 
-void MainThread_ResetAfterBattleTimer () {
+void MainThread_ResetBattleDelayTimer () {
+	if (threadState.startBattleTimer > 0) {
+		_MESSAGE ("Thread >> Reset BattleDelay at %.0f ms", threadState.startBattleTimer);
+		threadState.startBattleTimer = 0;
+		musicPlayer.recalculateBattleDelay (true);
+	}
+}
+
+
+
+void MainThread_ResetAfterBattleDelayTimer () {
 	if (threadState.afterBattleTimer > 0) {
 		_MESSAGE ("Thread >> Reset AfterBattleDelay at %.0f ms", threadState.afterBattleTimer);
 		threadState.afterBattleTimer = 0;
-		musicPlayer.recalculateAfterBattleDelay ();
+		musicPlayer.recalculateAfterBattleDelay (true);
 	}
 }
 
@@ -84,7 +80,7 @@ void MainThread_ResetPauseTimer () {
 	if (threadState.pauseTimer > 0) {
 		_MESSAGE ("Thread >> Reset Pause time at %.0f ms", threadState.pauseTimer);
 		threadState.pauseTimer = 0;
-		musicPlayer.recalculatePauseTime ();
+		musicPlayer.recalculatePauseTime (false);
 	}
 }
 
@@ -95,23 +91,20 @@ void MainThread_ResetPauseTimer () {
 //This ensures that the player can use Oblivion's audio controls
 //to control the music.
 void MainThread_SyncMusicVolume (void) {
+	static volatile bool *bMusicEnabled = INI::Audio::bMusicEnabled;
+	static volatile float *iniMasterVolume = INI::Audio::fDefaultMasterVolume;
+	static volatile float *iniMusicVolume = INI::Audio::fDefaultMusicVolume;
+	static float *fMusicVolumeDup = &mainGameVars->gameVars->SoundRecords->fMusicVolumeDup;
+	static float *fMasterVolume = &mainGameVars->gameVars->SoundRecords->fMasterVolume;
+
 	if (!*bMusicEnabled) {
-		musicPlayer.setMaxMusicVolume (ABSOLUTE_MINIMUM_VOLUME);
+		musicPlayer.setMaxMusicVolume (0);
 		return;
 	}
 
 	//Get the volume, a value between 0 and 1.
-	float fVolume;
-	float fMaster;
-	if (mainGameVars->gameVars && mainGameVars->gameVars->SoundRecords) {
-		fVolume = mainGameVars->gameVars->SoundRecords->fMusicVolumeDup;
-		fMaster = mainGameVars->gameVars->SoundRecords->fMasterVolume;
-	} else {
-		fVolume = *iniMusicVolume;
-		fMaster = *iniMasterVolume;
-	}
+	float fVolume = (*fMusicVolumeDup) * (*fMasterVolume);
 
-	fVolume *= fMaster;
 	for (MultipliersMap::iterator it = multipliersCustom.begin (); it != multipliersCustom.end (); it++) {
 		Multiplier& mult = it->second;
 		LockHandle (mult.hThread);
@@ -120,33 +113,21 @@ void MainThread_SyncMusicVolume (void) {
 		}
 		UnlockHandle (mult.hThread);
 	}
-	if (fVolume > 1) fVolume = 1;
 
-	//In the future, i will disable the music in better ways, but for now this is quick, if messy.
-	if (fVolume <= 0.0) {
-		musicPlayer.setMaxMusicVolume (ABSOLUTE_MINIMUM_VOLUME);
-	} else {
-		long lVolume = 2000.0 * log10 (fVolume);	//Volume is logarithmic.  This makes it linear.
-		musicPlayer.setMaxMusicVolume (lVolume);
-	}
+	musicPlayer.setMaxMusicVolume (fVolume);
 }
 
 
 
-bool MainThread_SwapPlaylist (void) {
-	int musicType = static_cast<int>(threadRequest.Request_Swap_Type);
-	_MESSAGE ("Thread >> Swap playlist: %d > %s", musicType, threadRequest.Request_Playlist->name);
-	bool ret = false;
+void MainThread_SetPlaylist (void) {
+	Playlist* newPlaylist;
+	MusicType musicType;
+	threadRequest.getSwapData (&newPlaylist, &musicType);
+	_MESSAGE ("Thread >> Swap playlist: %d > %s", musicType, newPlaylist->name);
 	LockHandle (hPlaylistMutex);
-	if (isMusicTypeValid(musicType)) {
 		ActivePlaylist* var = activePlaylists[musicType];
-		*var = threadRequest.Request_Playlist;
-		ret = true;
-	}
+		*var = newPlaylist;
 	UnlockHandle (hPlaylistMutex);
-	//Remove the swap request.
-	threadRequest.Request_Swap_Type = MusicType::Mt_NotKnown;
-	return ret;
 }
 
 
@@ -182,17 +163,15 @@ bool MainThread_FixLevelUp (bool PlayerIsPlaying) {
 
 
 void MainThread_SelectCustomTrack () {
-	LockHandle (hThreadMutex);
-	string track = threadRequest.Request_Track;
-	UnlockHandle (hThreadMutex);
+	string track = threadRequest.getCustomTrack();
 	LockHandle (hPlaylistMutex);
-	if (musicPlayer.queueTrack (track)) {
-		musicPlayer.playQueuedTrack (FadeMethod::fmFadeOutThenIn);
-		threadState.noTrack = false;
-	} else {
-		musicPlayer.stop (1000);
-		threadState.noTrack = true;
-	}
+		if (musicPlayer.queueTrack (track)) {
+			musicPlayer.playQueuedTrack (FadeMethod::fmFadeOutThenIn);
+			threadState.noTrack = false;
+		} else {
+			musicPlayer.stop (false, 1000);
+			threadState.noTrack = true;
+		}
 	UnlockHandle (hPlaylistMutex);
 	MainThread_ResetPauseTimer ();
 }
@@ -211,7 +190,7 @@ void MainThread_RestorePreviousTrack () {
 			_MESSAGE ("Thread >> Resume previous track: %s", threadState.lastPlayedSong);
 			threadState.noTrack = false;
 		} else {
-			musicPlayer.stop (1000);
+			musicPlayer.stop (false, 1000);
 			threadState.noTrack = true;
 		}
 		//And now save the current song as last song.
@@ -231,73 +210,74 @@ void MainThread_RestorePreviousTrack () {
 void MainThread_SelectNewTrack (float fadeOut, float fadeIn) {
 	//Place the currently playing song into threadState.
 	LockHandle (hPlaylistMutex);
-	threadState.activePlaylist = NULL;
-	switch (threadState.newType) {
-		case Explore: //Select a track from the Explore list.
-			threadState.activePlaylist = &apl_Explore; break;
-		case Public: //Select a track from the Public list.
-			threadState.activePlaylist = &apl_Public; break;
-		case Dungeon: //Select a track from the Dungeon list.
-			threadState.activePlaylist = &apl_Dungeon; break;
-		case Custom: //Select a track from the Custom list.
-			threadState.activePlaylist = &apl_Custom; break;
-		case Battle: //Select a track from the Battle list.
-			threadState.activePlaylist = &apl_Battle;
-			fadeOut = 500;
-			fadeIn = 1000;
-			break;
-		case Undefined:
-			_MESSAGE ("Thread >> Undefined music type"); break;
-			threadState.activePlaylist = NULL;
-		case Special:
-			fadeOut = fadeIn = 1000;
-			switch (threadState.curSpecial) {
-				case Death:
-					threadState.activePlaylist = &apl_Death;
-					threadState.HoldUntilMTChange = true;
-					break;
-				case Success:
-					threadState.activePlaylist = &apl_Success;
-					threadState.SuccessMusicFix = true;
-					LockHandle (hMusicStateMutex);
-						music.worldSaved = threadState.prevType;
-					UnlockHandle (hMusicStateMutex);
-					fadeOut = 500;
-					break;
-				case Title:
-					threadState.activePlaylist = &apl_Title;
-					threadState.loadFromTitle = true;
-					break;
-				default:
-					_MESSAGE ("Thread >> Unknown special music type");
-					threadState.activePlaylist = NULL;
-					break;
-			}
-			threadState.lastSpecial = threadState.curSpecial;
-			break;
-		default:
-			_MESSAGE ("Thread >> Unknown music type");
-			threadState.activePlaylist = NULL;
-			threadState.newType = MusicType::Mt_NotKnown;
-			break;
-	}
-	if (threadState.activePlaylist != NULL) {
-		Playlist* playlist = threadState.activePlaylist->playlist;
-		const char* trackPath = playlist->next ().c_str();
-		_MESSAGE ("Play track from active %s playlist \"%s\" >> %s", threadState.activePlaylist->name, playlist->name, trackPath);
-		if (musicPlayer.queueTrack (trackPath)) {
-			musicPlayer.playQueuedTrack (FadeMethod::fmFadeOutThenIn, fadeOut, fadeIn);
-			threadState.noTrack = false;
-			if (printNewTrack) {
-				Console_Print ("Now playing %s playlist \"%s\" >> %s", threadState.activePlaylist->name, playlist->name, trackPath);
+		threadState.activePlaylist = nullptr;
+		switch (threadState.newType) {
+			case Explore: //Select a track from the Explore list.
+				threadState.activePlaylist = &apl_Explore; break;
+			case Public: //Select a track from the Public list.
+				threadState.activePlaylist = &apl_Public; break;
+			case Dungeon: //Select a track from the Dungeon list.
+				threadState.activePlaylist = &apl_Dungeon; break;
+			case Custom: //Select a track from the Custom list.
+				threadState.activePlaylist = &apl_Custom; break;
+			case Battle: //Select a track from the Battle list.
+				threadState.activePlaylist = &apl_Battle;
+				fadeOut = fadeOutBattle;
+				fadeIn = fadeInBattle;
+				break;
+			case Undefined:
+				_MESSAGE ("Thread >> Undefined music type"); break;
+				threadState.activePlaylist = nullptr;
+			case Special:
+				switch (threadState.curSpecial) {
+					case Death:
+						threadState.activePlaylist = &apl_Death;
+						threadState.HoldUntilMTChange = true;
+						break;
+						fadeOut = fadeIn = 500;
+					case Success:
+						threadState.activePlaylist = &apl_Success;
+						threadState.SuccessMusicFix = true;
+						LockHandle (hMusicStateMutex);
+							music.worldSaved = threadState.prevType;
+						UnlockHandle (hMusicStateMutex);
+						fadeOut = fadeIn = 500;
+						break;
+					case Title:
+						threadState.activePlaylist = &apl_Title;
+						threadState.loadFromTitle = true;
+						fadeOut = fadeIn = 500;
+						break;
+					default:
+						_MESSAGE ("Thread >> Unknown special music type");
+						threadState.activePlaylist = nullptr;
+						break;
+				}
+				threadState.lastSpecial = threadState.curSpecial;
+				break;
+			default:
+				_MESSAGE ("Thread >> Unknown music type");
+				threadState.activePlaylist = nullptr;
+				threadState.newType = MusicType::Mt_NotKnown;
+				break;
+		}
+		if (threadState.activePlaylist != nullptr) {
+			Playlist* playlist = threadState.activePlaylist->playlist;
+			const char* trackPath = playlist->getNextTrack ().c_str();
+			_MESSAGE ("Play track from active %s playlist \"%s\" >> %s", threadState.activePlaylist->name, playlist->name, trackPath);
+			if (musicPlayer.queueTrack (trackPath)) {
+				musicPlayer.playQueuedTrack (FadeMethod::fmFadeOutThenIn, fadeOut, fadeIn);
+				threadState.noTrack = false;
+				if (printNewTrack) {
+					Console_Print ("Now playing %s playlist \"%s\" >> %s", threadState.activePlaylist->name, playlist->name, trackPath);
+				}
+			} else {
+				musicPlayer.stop (false, 1000);
+				threadState.noTrack = true;
 			}
 		} else {
-			musicPlayer.stop (1000);
-			threadState.noTrack = true;
+			_MESSAGE ("Thread >> No chosen active playlist for type/special type: %d/%d", threadState.newType, threadState.curSpecial);
 		}
-	} else {
-		_MESSAGE ("Thread >> No chosen active playlist for type/special type: %d/%d", threadState.newType, threadState.curSpecial);
-	}
 	UnlockHandle (hPlaylistMutex);
 	MainThread_ResetPauseTimer ();
 }
@@ -306,19 +286,19 @@ void MainThread_SelectNewTrack (float fadeOut, float fadeIn) {
 
 void MainThread_UpdateMusicType (bool newTypeBattle) {
 	LockHandle (hMusicStateMutex);
-	if (threadState.curType != threadState.newType && threadState.newType < MusicType::Mt_NotKnown) {
-		_MESSAGE ("Thread >> Update music types");
-		//Shift things around.
-		if (threadState.SuccessMusicFix && threadState.newType < 3) {
-			threadState.prevType = music.worldSaved;
-			music.worldSaved = threadState.newType;
-		} else {
-			threadState.prevType = threadState.curType;
+		if (threadState.curType != threadState.newType && threadState.newType < MusicType::Mt_NotKnown) {
+			_MESSAGE ("Thread >> Update music types");
+			//Shift things around.
+			if (threadState.SuccessMusicFix && threadState.newType < 3) {
+				threadState.prevType = music.worldSaved;
+				music.worldSaved = threadState.newType;
+			} else {
+				threadState.prevType = threadState.curType;
+			}
+			threadState.curType = threadState.newType;
+			//Reset the restoreTimer.
 		}
-		threadState.curType = threadState.newType;
-		//Reset the restoreTimer.
-	}
-	music.battlePlaying = newTypeBattle;
+		music.battlePlaying = newTypeBattle;
 	UnlockHandle (hMusicStateMutex);
 }
 
@@ -329,17 +309,16 @@ void MainThread (void *throwaway) {
 
 	//The amount of time the thread will sleep before processing again.
 	bool notPlayedOnce = true;
+
 	bool playerIsStopped = true;
 	bool playerIsReady = true;
-	bool typeChanged = false;
-	bool newTypeBattle = false;
-	bool newTypeSpecial = false;
-	bool performRequest = false;
-	bool performCustom = false;
-	bool performHoldMusic = false;
-	bool swapSucceed = false;
-	bool swapDelay = false;
-	bool forceUpdateMusicType = false;
+	bool musicChanged = false;
+	bool musicTypeChanged = false;
+	bool playlistChanged = false;
+	bool hasRequests = false;
+	bool hasRequestsCustomTrack = false;
+	bool hasRequestsHoldMusic = false;
+
 	float fadeOutTime = 1000;
 	float fadeInTime = 1000;
 
@@ -348,7 +327,7 @@ void MainThread (void *throwaway) {
 
 
 	//Allow this thread to manipulate COM objects.
-	CoInitialize (NULL);
+	CoInitialize (nullptr);
 
 	LockHandle (hMusicPlayerMutex);
 		do {
@@ -358,9 +337,9 @@ void MainThread (void *throwaway) {
 			} else if (mainGameVars->gameVars) {
 				_MESSAGE ("Thread >> Initialize data");
 				MainThread_DelayedInitialization ();
-				musicPlayer.recalculatePauseTime ();
-				musicPlayer.recalculateBattleDelay ();
-				musicPlayer.recalculateAfterBattleDelay ();
+				musicPlayer.recalculatePauseTime (false);
+				musicPlayer.recalculateBattleDelay (false);
+				musicPlayer.recalculateAfterBattleDelay (false);
 				fadeOutTime = musicPlayer.getCurrentFadeOutLength ();
 				fadeInTime = musicPlayer.getCurrentFadeInLength ();
 				_MESSAGE ("Thread >> Player initialized");
@@ -382,6 +361,12 @@ void MainThread (void *throwaway) {
 			//claiming the player's mutex.
 			playerIsStopped = musicPlayer.isStopped ();
 			playerIsReady = musicPlayer.isReady ();
+			if (notPlayedOnce) {
+				if (musicPlayer.hasPlayedOnce ()) {
+					_MESSAGE ("Thread >> Title music is playing");
+					notPlayedOnce = false;
+				}
+			}
 		UnlockHandle (hMusicPlayerMutex);
 
 
@@ -398,11 +383,18 @@ void MainThread (void *throwaway) {
 			threadState.curSpecial = music.special;
 		UnlockHandle (hMusicStateMutex);
 
-		typeChanged = !samePlaylist (threadState.newType, threadState.curType);
-		forceUpdateMusicType = true;
 
-		newTypeBattle = (threadState.newType == MusicType::Battle);
-		newTypeSpecial = (threadState.newType == MusicType::Special);
+
+		if (threadState.newType != threadState.curType) {
+			musicTypeChanged = true;
+			musicChanged = !samePlaylist (threadState.newType, threadState.curType);
+		} else {
+			musicTypeChanged = false;
+			musicChanged = false;
+		}
+
+		threadState.newTypeIsBattle = (threadState.newType == MusicType::Battle);
+		threadState.newTypeIsSpecial = (threadState.newType == MusicType::Special);
 
 
 
@@ -411,20 +403,16 @@ void MainThread (void *throwaway) {
 			threadState.restoreTimer += SLEEP_TIME;
 		}
 
-		if (newTypeBattle) {
+		if (threadState.newTypeIsBattle) {
 			if (threadState.startBattleTimer < musicPlayer.getCalculatedBattleDelay()) {
 				threadState.startBattleTimer += SLEEP_TIME;
 			} else if (!playerIsStopped && threadState.curType != MusicType::Battle) {
 				_MESSAGE ("Thread >> BattleDelay time reached. Can now switch to battle music.");
 			}
-			if (threadState.afterBattleTimer) {
-				MainThread_ResetAfterBattleTimer ();
-			}
+			MainThread_ResetAfterBattleDelayTimer ();
 			threadState.battleTimer += SLEEP_TIME;
 		} else {
-			if (threadState.startBattleTimer) {
-				MainThread_ResetStartBattleTimer ();
-			}
+			MainThread_ResetBattleDelayTimer ();
 			int afterBattleDelay = musicPlayer.getCalculatedAfterBattleDelay ();
 			if (threadState.afterBattleTimer < afterBattleDelay) {
 				if (threadState.curType == MusicType::Battle) {
@@ -442,79 +430,48 @@ void MainThread (void *throwaway) {
 
 		//Take all requests
 		LockHandle (hThreadMutex);
-			performRequest = (threadRequest.Request_PlayNext && (		// threadRequest.Request_PlayNext_MusicType != MusicType::Special && (
-				(threadRequest.Request_PlayNext_MusicType == threadState.newType) ||
-				(threadRequest.Request_PlayNext_MusicType == MusicType::Undefined && !newTypeSpecial)));
-			if (performCustom = threadRequest.hasRequestedCustomTrack ()) {
-				_MESSAGE ("Thread >> Play custom track: %s", threadRequest.Request_Track.c_str ());
+			hasRequests = threadRequest.hasRequests ();
+			hasRequestsCustomTrack = threadRequest.hasRequestedCustomTrack ();
+			hasRequestsHoldMusic = threadRequest.hasRequestedHoldMusic();
+			if (hasRequests || threadState.newTypeIsSpecial) {
+				threadRequest.cleanRequests ();
 			}
-			performHoldMusic = threadRequest.Request_HoldMusic;
-			if (performRequest || newTypeSpecial) {				// || threadRequest.Request_PlayNext_MusicType == MusicType::Special
-				if (threadRequest.Request_PlayNext) {
-					_MESSAGE ("Thread >> Perform request >> Music type: %d", threadRequest.Request_PlayNext_MusicType);
-				}
-				threadRequest.Request_PlayNext = false;
-				threadRequest.Request_PlayNext_MusicType = MusicType::Mt_NotKnown;
-			}
-			if (threadRequest.Request_Swap_FadeOut >= 0) {
-				fadeOutTime = threadRequest.Request_Swap_FadeOut;
-				threadRequest.Request_Swap_FadeOut = -1;
-			}
-			if (threadRequest.Request_Swap_FadeIn >= 0) {
-				fadeInTime = threadRequest.Request_Swap_FadeIn;
-				threadRequest.Request_Swap_FadeIn = -1;
-			}
+			threadRequest.getSwapFadeTimes (&fadeInTime, &fadeOutTime);
 
 			//Do we need to do a playlist swap?
-			if (threadRequest.Request_Swap_Delay > 0) {
-				threadRequest.Request_Swap_Delay -= SLEEP_TIME;
-				swapDelay = (threadRequest.Request_Swap_Delay <= 0);
-				if (swapDelay) {
-					_MESSAGE ("Thread >> Time to swap after the delay");
-				}
-			}
-			if ((playerIsStopped && threadRequest.Request_Swap_Type != MusicType::Mt_NotKnown) || swapDelay) {
-				swapSucceed = MainThread_SwapPlaylist ();
-				swapDelay = false;
+			if ((playerIsStopped && threadRequest.hasRequestedSetPlaylist ()) || threadRequest.checkDelayedSetPlaylist (SLEEP_TIME)) {
+				MainThread_SetPlaylist ();
+				playlistChanged = true;
 			}
 		UnlockHandle (hThreadMutex);
-
-
-
-		if (notPlayedOnce) {
-			if (musicPlayer.hasPlayedOnce ()) {
-				_MESSAGE ("Thread >> Title music is playing. Player will now accept other music types.");
-				notPlayedOnce = false;
-			}
-		}
 
 
 		//Update the playing music
 		//If (type changed) or (the special music changed while playing special music) or (no music is playing).
 		if (!notPlayedOnce && playerIsReady) {
-			if (performRequest || performCustom || swapSucceed
+			if (hasRequests || hasRequestsCustomTrack || playlistChanged
 				|| (playerIsStopped && !threadState.HoldUntilMTChange && !threadState.noTrack)	//Ok, not playing, but if there's no track to play...
-				|| (!typeChanged && newTypeSpecial && threadState.curSpecial != threadState.lastSpecial)	//Type not changed, but special track is coming...
-				|| (typeChanged && ((!newTypeBattle && threadState.afterBattleTimer >= musicPlayer.getCalculatedAfterBattleDelay ()) || (newTypeBattle && threadState.battleTimer >= musicPlayer.getCalculatedBattleDelay ()))) //Type changed and (it's not a battle OR enough time passed since battle begun)
+				|| (!musicChanged && threadState.newTypeIsSpecial && threadState.curSpecial != threadState.lastSpecial)	//Type not changed, but special track is coming...
+				|| (musicChanged && ((!threadState.newTypeIsBattle && threadState.afterBattleTimer >= musicPlayer.getCalculatedAfterBattleDelay ()) || (threadState.newTypeIsBattle && threadState.battleTimer >= musicPlayer.getCalculatedBattleDelay ()))) //Type changed and (it's not a battle OR enough time passed since battle begun)
 				) {
 				if (threadState.newType != 65535) {
-					_MESSAGE ("Thread >> Update music >> New/Current/Previous music types: %d/%d/%d, IsPlaying: %d, Hold: %d, Pause time: %.0f", threadState.newType, threadState.curType, threadState.prevType, !playerIsStopped, performHoldMusic, threadState.pauseTimer);
+					_MESSAGE ("Thread >> Update music >> New/Current/Previous music types: %d/%d/%d, IsPlaying: %d, Hold: %d, Pause time: %.0f", threadState.newType, threadState.curType, threadState.prevType, !playerIsStopped, hasRequestsHoldMusic, threadState.pauseTimer);
 				}
 				threadState.HoldUntilMTChange = false;
 				if (MainThread_FixLevelUp (!playerIsStopped)) {
-					typeChanged = false;
-					newTypeBattle = (threadState.newType == MusicType::Battle);
-					newTypeSpecial = (threadState.newType == MusicType::Special);
+					musicChanged = false;
+					threadState.newTypeIsBattle = (threadState.newType == MusicType::Battle);
+					threadState.newTypeIsSpecial = (threadState.newType == MusicType::Special);
 				}
 
 				LockHandle (hMusicPlayerMutex);
-					if (performCustom) {		//Play custom track
+					if (hasRequestsCustomTrack) {		//Play custom track
 						MainThread_StorePreviousTrack (!playerIsStopped);
 						MainThread_ResetBattleTimer ();
 						MainThread_SelectCustomTrack ();
-					} else if (playerIsStopped && (performHoldMusic || threadState.pauseTimer < musicPlayer.getCalculatedPauseTime ())) { //Prevent the player from playing something.
+					} else if (playerIsStopped && (hasRequestsHoldMusic || threadState.pauseTimer < musicPlayer.getCalculatedPauseTime ())) { //Prevent the player from playing something.
 						UnlockHandle (hMusicPlayerMutex);
-						if (!performHoldMusic) {
+						if (!hasRequestsHoldMusic) {
 							if (threadState.pauseTimer <= 0) {
 								_MESSAGE ("Thread >> Begin pause");
 							}
@@ -526,16 +483,16 @@ void MainThread (void *throwaway) {
 						threadState.lastPlayedSet = false;
 						Sleep (SLEEP_TIME);
 						continue;
-					} else if (threadState.lastPlayedSet && threadState.newType == threadState.prevType && !newTypeSpecial && threadState.curSpecial != SpecialMusicType::Success &&
+					} else if (threadState.lastPlayedSet && threadState.newType == threadState.prevType && !threadState.newTypeIsSpecial && threadState.curSpecial != SpecialMusicType::Success &&
 						((threadState.restoreTimer <= musicPlayer.getMaxRestoreTime()) ||
-						(threadState.curType == MusicType::Battle && !newTypeBattle && threadState.battleTimer < 60000))
+						(threadState.curType == MusicType::Battle && !threadState.newTypeIsBattle && threadState.battleTimer < 60000))
 						) {	//Resume the previous track 
 						MainThread_RestorePreviousTrack ();
 						//Or play a new one
 					} else if (threadState.newType <= 255) {
 						MainThread_StorePreviousTrack (!playerIsStopped);
 						MainThread_ResetBattleTimer ();
-						if (!(performRequest || swapSucceed)) {
+						if (!(hasRequests || playlistChanged)) {
 							fadeOutTime = musicPlayer.getCurrentFadeOutLength ();
 							fadeInTime = musicPlayer.getCurrentFadeInLength ();
 						}
@@ -544,20 +501,20 @@ void MainThread (void *throwaway) {
 				UnlockHandle (hMusicPlayerMutex);
 
 				threadState.restoreTimer = 0;
-				MainThread_UpdateMusicType (newTypeBattle);
+				MainThread_UpdateMusicType (threadState.newTypeIsBattle);
 				fadeOutTime = musicPlayer.getCurrentFadeOutLength ();
 				fadeInTime = musicPlayer.getCurrentFadeInLength ();
-				swapSucceed = false;
-				forceUpdateMusicType = false;
+				playlistChanged = false;
+				musicTypeChanged = false;
 			}
 		}
 		Sleep (SLEEP_TIME);
 		LockHandle (hMusicPlayerMutex);
-		musicPlayer.updatePlayer (SLEEP_TIME);
+			musicPlayer.updatePlayer (SLEEP_TIME);
 		UnlockHandle (hMusicPlayerMutex);
-		if (forceUpdateMusicType) {
-			MainThread_UpdateMusicType (newTypeBattle);
-			forceUpdateMusicType = false;
+		if (musicTypeChanged) {
+			MainThread_UpdateMusicType (threadState.newTypeIsBattle);
+			musicTypeChanged = false;
 		}
 	}
 	_MESSAGE ("Thread >> Exited normally.");

@@ -13,6 +13,8 @@ WaitForMultipleObjects (arraySize(handleSet,HANDLE), handleSet, 1, INFINITE);
 
 #define isBetween(val,min,max) (min <= val && val <= max)
 
+#define clamp(val,min,max) (val < min ? min : (val > max ? max : val))
+
 
 
 //Quick code

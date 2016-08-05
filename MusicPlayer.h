@@ -4,6 +4,8 @@
 #include <tchar.h>		//Don't ask me why, it doesn't compile without this...
 #include <dshow.h>
 
+
+
 //1 Second
 #define ONCE_SECOND 10000000.0
 
@@ -12,21 +14,15 @@
 #define ABSOLUTE_MINIMUM_VOLUME -10000
 
 //But below -4000, you can't really hear the audio anyways.
-//So, this is the effective minimum, and is what is used
-//during fades.
+//So, this is the effective minimum, and is what is used during fades.
 #define EFFECTIVE_MINIMUM_VOLUME -4000
 
-//There is only one maximum.  It would be funny if they made it '11'.
+//There is only one maximum. It would be funny if they made it '11'.
 #define MAXIMUM_VOLUME 0
 
 
 
-
 using namespace std;
-
-
-
-extern HANDLE hMusicPlayerMutex;
 
 
 
@@ -66,10 +62,10 @@ enum FadeMethod : short {
 
 
 struct QueuedTrack {
-	QueuedTrack (const string& name, REFERENCE_TIME position) : name (name), position (position), queued (true) {};
+	QueuedTrack (const string &name, REFERENCE_TIME position) : name (name), position (position), queued (true) {};
 	QueuedTrack () : queued (false) {};
 
-	bool get (string* name, REFERENCE_TIME* position);
+	bool get (string *name, REFERENCE_TIME *position);
 	bool isQueued () const;
 
 private:
@@ -127,30 +123,28 @@ public:
 
 	//Queues a track to play (only one track at a time).
 	//Starts playback from beginning.
-	bool queueTrack (const string& track);
+	bool queueTrack (const string &track);
 
 
 	//Queues a track to play (only one track at a time).
 	//Starts playback from the specified position.
-	bool queueTrack (const string& track, REFERENCE_TIME position);
+	bool queueTrack (const string &track, REFERENCE_TIME position);
 
 
-	//Playes the queued track.  Uses the given fade method
-	//when starting and/or stopping playback.  If a fade is
-	//specified, the fade will occur over defaultFade milliseconds.
+	//Playes the queued track. 
+	//Uses the given fade method when starting and/or stopping playback.
+	//If a fade is specified, the fade will occur over default fade time.
 	bool playQueuedTrack (FadeMethod fadeMethod);
 
 
-	//Playes the queued track.  Uses the given fade method
-	//when starting and/or stopping playback.  If a fade is
-	//specified, the fade will occur over the length of time
-	//(in milliseconds) specified.
+	//Playes the queued track.
+	//Uses the given fade method when starting and/or stopping playback.
+	//If a fade is specified, the fade will occur over the length of time (in milliseconds) specified.
 	bool playQueuedTrack (FadeMethod fadeMethod, int FadeLength);
 
 
-	//Plays the queued track.  This version, if a fadeMethod is described,
-	//allows fine control over the length of time spent fading in and
-	//fadign out, individually.
+	//Plays the queued track.
+	//If a fadeMethod is described, allows fine control over the length of time spent fading in and fadign out, individually.
 	bool playQueuedTrack (FadeMethod fadeMethod, int FadeOutLength, int FadeInLength);
 
 
@@ -161,10 +155,9 @@ public:
 	//Gets the track's position
 	REFERENCE_TIME getTrackPosition () const;
 
-	//Change the current track position.  If a song is currently playing and the
-	//fade method is not NoFade, the song will be faded to a stop then
-	//restarted from the given position.
-	bool setTrackPosition (REFERENCE_TIME position, int fadeOut, int fadeIn);
+	//Change the current track position.
+	//If a song is currently playing and the fade method is not NoFade, the song will be faded to a stop then restarted from the given position.
+	bool setTrackPosition (bool lock, REFERENCE_TIME position, int fadeOut, int fadeIn);
 
 	//Gets the track's duration
 	REFERENCE_TIME getTrackDuration () const;
@@ -173,122 +166,118 @@ public:
 	int getCurrentFadeInLength () const;
 
 	//Sets the current fade in lenght
-	bool setCurrentFadeInLength (int length);
+	bool setCurrentFadeInLength (bool lock, int length);
 
 	//Gets the current fade out lenght
 	int getCurrentFadeOutLength () const;
 
 	//Sets the current fade out lenght
-	bool setCurrentFadeOutLength (int length);
+	bool setCurrentFadeOutLength (bool lock, int length);
 
 
 	//Gets the min pause between tracks
 	int getMinPauseTime () const;
 
 	//Sets the min pause between tracks
-	bool setMinPauseTime (int length);
+	bool setMinPauseTime (bool lock, int length);
 
 	//Gets the extra pause between tracks
 	int getExtraPauseTime () const;
 
 	//Sets the extra pause between tracks
-	bool setExtraPauseTime (int length);
+	bool setExtraPauseTime (bool lock, int length);
 
 	//Gets the calculated random pause (in the range [min, min+extra]) between tracks
 	int getCalculatedPauseTime () const;
 
 	//Calculate a new random pause (in the range [min, min+extra]) between tracks
-	void recalculatePauseTime ();
+	void recalculatePauseTime (bool lock);
 
 
 	//Gets the extra delay before starting the battle music
 	int getMinBattleDelay () const;
 
 	//Sets the min delay before starting the battle music
-	bool setMinBattleDelay (int length);
+	bool setMinBattleDelay (bool lock, int length);
 
 	//Gets the extra delay before starting the battle music
 	int getExtraBattleDelay () const;
 
 	//Sets the extra delay before starting the battle music
-	bool setExtraBattleDelay (int length);
+	bool setExtraBattleDelay (bool lock, int length);
 
 	//Gets the calculated random delay (in the range [min, min+extra]) before starting the battle music
 	int getCalculatedBattleDelay () const;
 
 	//Calculate a new random delay (in the range [min, min+extra]) before starting the battle music
-	void recalculateBattleDelay ();
+	void recalculateBattleDelay (bool lock);
 
 
 	//Gets the min delay before stopping the battle music
 	int getMinAfterBattleDelay () const;
 
 	//Sets the min delay before stopping the battle music
-	bool setMinAfterBattleDelay (int length);
+	bool setMinAfterBattleDelay (bool lock, int length);
 
 	//Gets the extra delay before stopping the battle music
 	int getExtraAfterBattleDelay () const;
 
 	//Sets the extra delay before stopping the battle music
-	bool setExtraAfterBattleDelay (int length);
+	bool setExtraAfterBattleDelay (bool lock, int length);
 
 	//Gets the calculated random delay (in the range [min, min+extra]) before stopping the battle music
 	int getCalculatedAfterBattleDelay () const;
 
 	//Calculate a new random delay (in the range [min, min+extra]) before stopping the battle music
-	void recalculateAfterBattleDelay ();
+	void recalculateAfterBattleDelay (bool lock);
 
 
 	//Gets the max restore time (how much time the player will remember the previous track to restore it)
 	int getMaxRestoreTime () const;
 
 	//Sets the max restore time (how much time the player will remember the previous track to restore it)
-	bool setMaxRestoreTime (int length);
+	bool setMaxRestoreTime (bool lock, int length);
 
 
 	//Sets the maximum volume of the player.
 	//Setting this while fading will not adversely affect the fading process.
-	bool setMaxMusicVolume (long lVolume);
+	bool setMaxMusicVolume (float volume);
 
 	//Gets the music speed
-	double getMusicSpeed (void) const;
+	double getMusicSpeed () const;
 
 	//Sets the music speed
-	bool setMusicSpeed (double speed);
+	bool setMusicSpeed (bool lock, double speed);
 
 
 
 
 	//Stops playback.  Can be restarted with Restart().
-	bool stop (int fadeOut);
+	bool stop (bool lock, int fadeOut);
 
-	//Pauses the currently playing track.  This does nothing if the track
-	//is stopped.  If any fade method other then NoFade is used, the track
-	//is faded to a pause over 1 second.
-	bool pause (int fadeOut);
+	//Pauses the currently playing track. This does nothing if the track is stopped. 
+	//If any fade method other then NoFade is used, the track is faded to a pause.
+	bool pause (bool lock, int fadeOut);
 
-	//Resumes the currently paused track.  This does nothing if the track
-	//is stopped (use Restart to play a track again).  If any fade method
-	//other than NoFade is used, the track is faded in when it is resumed.
-	bool resume (int fadeIn);
+	//Resumes the currently paused track.
+	//This does nothing if the track is stopped (use Restart to play a track again).
+	//If any fade method other than NoFade is used, the track is faded in when it is resumed.
+	bool resume (bool lock, int fadeIn);
 
-	//Restarts the current track.  If a song is currently playing and the
-	//fade method is not NoFade, the song will be faded to a stop then
-	//restarted from the beginning.
-	bool restart (int fadeOut, int fadeIn);
+	//Restarts the current track.
+	//If a song is currently playing and the fade method is not NoFade, the song will be faded to a stop then restarted from the beginning.
+	bool restart (bool lock, int fadeOut, int fadeIn);
 
-	//Should be called by SentryThread once an iteration.  This function does
-	//things like checks the state of the player, fades the volume, and keeps
-	//thing in order.
+	//Should be called by MainThread once an iteration.
+	// This function does things like checks the state of the player, fades the volume, and keeps thing in order.
 	void updatePlayer (int sleepTime);
 
-	//Forces the player to halt, irregardless of it's status.  Use this when the
-	//program exits to put an immediately halt to the player.  Like a self-destruct
-	//button, its both usable only once and located in the central brain area.  :D
+	//Forces the player to halt, irregardless of it's status.
+	//Use this when the program exits to put an immediately halt to the player.
+	//Like a self-destruct button, it's usable only once and located in the central brain area.
 	void forceKill ();
 
-	//If any of these methods returns false (as in they failed), the error
-	//can be obtained from here to assist the user in debugging.
+	//If there's any error message, it can be obtained from here.
 	const char* getErrorMessage () const;
 
 
@@ -306,20 +295,20 @@ private:
 
 	//These contain pointers to our DShow interfaces.
 	//GraphBuilder lets us generate graphs which are used to render the sound.
-	IGraphBuilder *pGraphBuilder = NULL;
+	IGraphBuilder *pGraphBuilder = nullptr;
 
 	//MediaControl allows us to control the playback of the graph.
-	IMediaControl *pMediaControl = NULL;
+	IMediaControl *pMediaControl = nullptr;
 
 	//MediaSeeking allows us to obtain position and playback information.
-	IMediaSeeking *pMediaSeeking = NULL;
+	IMediaSeeking *pMediaSeeking = nullptr;
 
 	//MediaEventEx allows us to handle events generated by the DShow interfaces.
-	IMediaEventEx *pMediaEventEx = NULL;
+	IMediaEventEx *pMediaEventEx = nullptr;
 
 	//BasicAudio allows us to affect the balance and amplitude of the playback.
 	//In other words, its the volume control.
-	IBasicAudio *pBasicAudio = NULL;
+	IBasicAudio *pBasicAudio = nullptr;
 
 
 
@@ -333,7 +322,7 @@ private:
 	FadeMethod fadeMethod = FadeMethod::fmNoFade;;
 
 	//The last error message given.
-	string lastError;
+	char *lastError;
 
 	//This variable tells the player that it has loaded at least one song in the past.
 	//This is important for the Restart function.
@@ -374,11 +363,9 @@ private:
 	int extraAfterBattleTime = 0;
 	int calculatedAfterBattleTime;
 
-	//Restore period is used to restore the previous song if the music type
-	//changes once, then suddenly changes back again.  Say the player enters
-	//an Inn, then exits within a short period of time.  This will make it so
-	//the previous music will play where it left off instead of restarting
-	//a new track.
+	//Restore period is used to restore the previous song if the music type changes once, then suddenly changes back again.
+	//Say the player enters an Inn, then exits within a short period of time.
+	//This will make it so the previous music will play where it left off instead of restarting a new track.
 	int maxMusicRestoreTime = 20000;
 
 	//The maximum volume the player will be allowed to play at.
@@ -387,11 +374,10 @@ private:
 	long maximumVolume = 0;
 
 	
-	//This variable indicates the length of time the player should fade
-	//out the volume for.
+	//This variable indicates the length of time the player should fade out the volume for.
 	int fadeOutPeriod = 1000;
-	//This variable indicates the length of time the player should fade
-	//in the volume for.
+
+	//This variable indicates the length of time the player should fade in the volume for.
 	int fadeInPeriod = 1000;
 
 	//The total time the thread has slept since fading started.
@@ -404,9 +390,8 @@ private:
 	//Fades the volume of the playing music in or out as needed.
 	bool doFading (int sleepTime);
 
-	//Whenever a task was to be carried out after a fade, this function
-	//is the thing that does it.  It does a lot of things depending on
-	//what the task is, so tread carefully.
+	//Whenever a task was to be carried out after a fade, this function is the thing that does it.
+	//It does a lot of things depending on what the task is, so tread carefully.
 	bool doTask ();
 
 	//Does the DShow event handling and check the state.
@@ -425,3 +410,4 @@ private:
 
 
 extern MusicPlayer musicPlayer;
+extern HANDLE hMusicPlayerMutex;

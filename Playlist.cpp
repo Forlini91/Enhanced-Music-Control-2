@@ -15,6 +15,7 @@ using namespace std;
 HANDLE hPlaylistMutex;		//"Playlist" Mutex.  Lock when reading/manipulating any of the playlists.
 Playlist* vanillaPlaylists[8];
 PlaylistsMap playlists;
+const string emptyStr;
 
 
 
@@ -42,17 +43,26 @@ Playlist::Playlist (const char* name, const string& paths, bool randomOrder, boo
 
 
 bool Playlist::setPaths (const string& paths, bool randomOrder) {
-	if (initialized = buildPaths (paths)) {
-		Playlist::randomOrder = randomOrder;
+	Playlist backup = Playlist (this);
+	if (buildPaths (paths)) {
+		_MESSAGE ("Playlist: \"%s\" > New paths: \"%s\"", name, paths.c_str ());
+		initialized = true;
+		Playlist::randomOrder = randomOrder && tracks.size () >= 2;
 		sortTracks (true);
 		curIndex = -1;
+		return true;
+	} else {
+		_MESSAGE ("Playlist: \"%s\" > Path is not valid or empty: \"%s\"", name, paths.c_str ());
+		backup.moveTo (this);
+		initialized = false;
+		return false;
 	}
-	return initialized;
 }
 
 
 
 bool Playlist::addPath (const string& path) {
+	Playlist backup = Playlist(this);
 	_MESSAGE ("Playlist: \"%s\" > Add path: \"%s\"", name, path.c_str ());
 	if (buildPath (path, true)) {
 		_MESSAGE ("Playlist: \"%s\" > Added path: \"%s\"", name, path.c_str ());
@@ -62,13 +72,14 @@ bool Playlist::addPath (const string& path) {
 		return true;
 	} else {
 		_MESSAGE ("Playlist: \"%s\" > Path is not valid or empty: \"%s\"", name, path.c_str ());
+		backup.moveTo (this);
 		return false;
 	}
 }
 
 
 
-const vector<string>& Playlist::getTracks () const {
+const TracksList& Playlist::getTracks () const {
 	return tracks;
 }
 
@@ -80,7 +91,17 @@ int Playlist::size () const {
 
 
 
-const string Playlist::next () {
+const string& Playlist::getCurrentTrack () const {
+	if (initialized && curIndex >= 0) {
+		return tracks.at (curIndex);
+	} else {
+		return emptyStr;
+	}
+}
+
+
+
+const string& Playlist::getNextTrack () {
 	if (initialized) {
 		curIndex++;
 		if (curIndex >= tracks.size ()) {
@@ -90,21 +111,18 @@ const string Playlist::next () {
 		_MESSAGE ("Track n° %d/%d", curIndex, tracks.size ());
 		return tracks.at (curIndex);
 	}
-	return "";
+	return emptyStr;
 }
 
 
 
-const string Playlist::current () {
-	if (initialized) {
-		if (curIndex == -1) {
-			curIndex = 0;
-			return tracks.at (0);
-		} else {
-			return tracks.at (curIndex);
-		}
+bool Playlist::restoreTrackPosition (const string& trackName) {
+	TracksList::iterator pos = find (tracks.begin (), tracks.end (), trackName);
+	if (pos != tracks.end ()) {
+		curIndex = distance (tracks.begin (), pos);
+		return true;
 	} else {
-		return "";
+		return false;
 	}
 }
 
@@ -132,6 +150,16 @@ void Playlist::copyTo (Playlist* copyTo) const {
 
 
 
+void Playlist::moveTo (Playlist* moveTo) {
+	moveTo->paths = move (paths);
+	moveTo->randomOrder = randomOrder;
+	moveTo->tracks = move (tracks);
+	moveTo->curIndex = curIndex;
+	moveTo->initialized = initialized;
+}
+
+
+
 void Playlist::printTracks () const {
 	if (initialized) {
 		//s1 = Convert::ToString(name.GetBuffer()) + Convert::ToString("->Path  ") + Convert::ToString(TargetPath.GetStr().GetBuffer());
@@ -140,10 +168,8 @@ void Playlist::printTracks () const {
 			Console_Print ("Path: %s", path.c_str());
 		}
 		Console_Print ("Number of tracks: %d", (int)tracks.size ());
-		string t;
 		for (const string& track : tracks) {
-			t = getFileName (track);
-			Console_Print ("Track: %s", t.c_str());
+			Console_Print ("Track: %s", getFileName (track).c_str ());
 		}
 	} else {
 		Console_Print ("%s has no track", name);
@@ -156,8 +182,8 @@ void Playlist::printTracks () const {
 
 
 
-vector<string> Playlist::tokenizePaths (const string& paths) const {
-	vector<string> pathVec;
+PathsList Playlist::tokenizePaths (const string& paths) const {
+	PathsList pathVec;
 	int i = 0;
 	int j = 0;
 	int n = paths.size ();
@@ -191,8 +217,8 @@ bool Playlist::buildPaths (const string& pathList) {
 	tracks.clear ();
 	paths.clear ();
 	//The string may contains more than one path, separated by '>' or '|'.
-	vector<string> pathVec = tokenizePaths (pathList);
-	for (string path : pathVec) {
+	PathsList pathsList = tokenizePaths (pathList);
+	for (string& path : pathsList) {
 		if (buildPath (path, false)) {
 			once = true;
 		}

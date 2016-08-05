@@ -4,10 +4,6 @@
 
 
 
-extern HANDLE hMusicStateMutex;
-
-
-
 class MusicState {
 
 public:
@@ -45,3 +41,4 @@ private:
 
 
 extern MusicState music;
+extern HANDLE hMusicStateMutex;

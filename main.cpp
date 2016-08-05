@@ -40,7 +40,7 @@
 #include "GameAPI.h"
 
 //Project includes
-#include "GlobalSettings.h"
+#include "Globals.h"
 #include "VanillaPlaylistData.h"
 #include "SafeWrite/SafeWrite.h"
 #include "Multiplier.h"
@@ -50,44 +50,24 @@
 #include "ActivePlaylist.h"
 #include "Hooks.h"
 #include "EMC2INISettings.h"
+#include "IniData.h"
 #include "Commands.h"
 #include "ThreadRequest.h"
 #include "MainThread.h"
+#include "OBSEInterfaces.h"
 
 
 using namespace std;
 
-//#define ENABLE_PLUGINTEST
-//#define DISABLE_COMMANDS
 
 
 IDebugLog gLog("enhanced_music_control_2.log");
-
-PluginHandle				g_pluginHandle;
-OBSESerializationInterface	*g_serialization = NULL;
-OBSEArrayVarInterface		*g_arrayIntfc = NULL;
-OBSEStringVarInterface		*g_stringIntfc = NULL;
-
-
-bool printNewTrack = false;
-bool delayTitleMusicEnd = true;
-int numPlaylists;
-int numMultipliers;
-
-
-
-
-
-
-
-
-
 
 
 
 //EMCT - World MusicType playing at time of save.
 //EMCV - The Relative Volume.
-static void EMC2_SaveCallback(void * reserved) {
+static void EMC2_SaveCallback(void *reserved) {
 	_MESSAGE("Event >> SaveGame");
 	LockHandle (hMusicStateMutex);
 		MusicType save = (music.GetWorldMusic());
@@ -100,7 +80,7 @@ static void EMC2_SaveCallback(void * reserved) {
 
 
 
-static void EMC2_LoadCallback(void * reserved) {
+static void EMC2_LoadCallback(void *reserved) {
 	UInt32	type, version, length;
 
 	_MESSAGE("Event >> LoadGame");
@@ -137,7 +117,7 @@ static void EMC2_LoadCallback(void * reserved) {
 
 
 
-static void EMC2_NewGameCallback(void * reserved) {
+static void EMC2_NewGameCallback(void *reserved) {
 	_MESSAGE("Event >> NewGame");
 	LockHandle (hMusicStateMutex);
 		music.world = MusicType::Dungeon;			//Should be fine for your vanilla Oblivion.
@@ -159,7 +139,7 @@ static void EMC2_NewGameCallback(void * reserved) {
 
 extern "C" {
 
-	bool OBSEPlugin_Query(const OBSEInterface * obse, PluginInfo * info) {
+	bool OBSEPlugin_Query(const OBSEInterface *obse, PluginInfo *info) {
 		_MESSAGE("EMC2 >> Query");
 
 		// fill out the info structure
@@ -206,7 +186,7 @@ extern "C" {
 
 
 
-	bool OBSEPlugin_Load(const OBSEInterface * obse) {
+	bool OBSEPlugin_Load(const OBSEInterface *obse) {
 		_MESSAGE("EMC2 >> Load");
 
 		RegisterStringVarInterface (g_stringIntfc);
@@ -292,12 +272,11 @@ extern "C" {
 		obse->RegisterCommand		(&kMusicRestartCommand);						//284E
 		obse->RegisterCommand		(&kMusicNextTrackCommand);						//284F
 
-		//Initialize the Mutex so Sentry thread knows when its safe to
-		//read or alter global variables.
-		hMusicStateMutex = CreateMutex(NULL, FALSE, NULL);  // Starts cleared, no owner
-		hMusicPlayerMutex = CreateMutex(NULL, FALSE, NULL);
-		hPlaylistMutex = CreateMutex(NULL, FALSE, NULL);
-		hThreadMutex = CreateMutex(NULL, FALSE, NULL);
+		//Initialize the Mutex so Main thread knows when its safe to read or alter global variables.
+		hMusicStateMutex = CreateMutex(nullptr, FALSE, nullptr);  // Starts cleared, no owner
+		hMusicPlayerMutex = CreateMutex(nullptr, FALSE, nullptr);
+		hPlaylistMutex = CreateMutex(nullptr, FALSE, nullptr);
+		hThreadMutex = CreateMutex(nullptr, FALSE, nullptr);
 
 		
 		// set up serialization callbacks when running in the runtime
@@ -332,23 +311,23 @@ extern "C" {
 			WriteRelJump (0x006AC026, 0x006AC056);	// Stop Oblivion from writing current volume levels to INI. The audio menu does it anyway.
 
 
-			iniSettings.Initialize (INI_PATH, NULL);
-			iniSettings.applySettings (delayTitleMusicEnd, printNewTrack, numPlaylists, numMultipliers);
+			iniSettings.Initialize (INI_PATH, nullptr);
+			iniSettings.applySettings ();
 			playlists.reserve (numPlaylists+1);
 			multipliersCustom.reserve (numMultipliers+1);
 
 			_MESSAGE ("Create default playlists");
 
-			apl_Explore	= vanillaPlaylists[0] = &GET_EMPLACED (EMPLACE_PLAYLIST (obExplore, obExplorePath, true, true));
-			apl_Public	= vanillaPlaylists[1] = &GET_EMPLACED (EMPLACE_PLAYLIST (obPublic, obPublicPath, true, true));
-			apl_Dungeon	= vanillaPlaylists[2] = &GET_EMPLACED (EMPLACE_PLAYLIST (obDungeon, obDungeonPath, true, true));
-			apl_Custom	= vanillaPlaylists[3] = &GET_EMPLACED (EMPLACE_PLAYLIST_UNDEF (obCustom, true));
-			apl_Battle	= vanillaPlaylists[4] = &GET_EMPLACED (EMPLACE_PLAYLIST (obBattle, obBattlePath, true, true));
-			apl_Death	= vanillaPlaylists[5] = &GET_EMPLACED (EMPLACE_PLAYLIST (obDeath, obDeathPath, true, true));
-			apl_Success	= vanillaPlaylists[6] = &GET_EMPLACED (EMPLACE_PLAYLIST (obSuccess, obSuccessPath, true, true));
-			apl_Title	= vanillaPlaylists[7] = &GET_EMPLACED (EMPLACE_PLAYLIST (obTitle, obTitlePath, true, true));
-	
-			_beginthread (MainThread, 0, NULL);
+			apl_Explore	.initialize	(0, &GET_EMPLACED (EMPLACE_PLAYLIST (obExplore, obExplorePath, true, true)));
+			apl_Public	.initialize	(1, &GET_EMPLACED (EMPLACE_PLAYLIST (obPublic, obPublicPath, true, true)));
+			apl_Dungeon	.initialize	(2, &GET_EMPLACED (EMPLACE_PLAYLIST (obDungeon, obDungeonPath, true, true)));
+			apl_Custom	.initialize	(3, &GET_EMPLACED (EMPLACE_PLAYLIST_UNDEF (obCustom, true)));
+			apl_Battle	.initialize	(4, &GET_EMPLACED (EMPLACE_PLAYLIST (obBattle, obBattlePath, true, true)));
+			apl_Death	.initialize	(5, &GET_EMPLACED (EMPLACE_PLAYLIST (obDeath, obDeathPath, true, true)));
+			apl_Success	.initialize	(6, &GET_EMPLACED (EMPLACE_PLAYLIST (obSuccess, obSuccessPath, true, true)));
+			apl_Title	.initialize	(7, &GET_EMPLACED (EMPLACE_PLAYLIST (obTitle, obTitlePath, true, true)));
+
+			_beginthread (MainThread, 0, nullptr);
 		}
 		
 		return true;
