@@ -180,6 +180,7 @@ copy "$(TargetPath)" "C:\Bethesda Softworks\Nehrim\Data\OBSE\Plugins\$(TargetFil
     <ClInclude Include="MainGameVarsStruct.h" />
     <ClInclude Include="MainThread.h" />
     <ClInclude Include="Multiplier.h" />
+    <ClInclude Include="SME_Prefix.h" />
     <ClInclude Include="VanillaPlaylistData.h" />
     <ClInclude Include="MusicPlayer.h" />
     <ClInclude Include="Playlist.h" />
@@ -189,7 +190,6 @@ copy "$(TargetPath)" "C:\Bethesda Softworks\Nehrim\Data\OBSE\Plugins\$(TargetFil
     <ClInclude Include="SafeWrite\SafeWrite.h" />
     <ClInclude Include="ThreadRequest.h" />
     <ClInclude Include="ThreadState.h" />
-    <ClInclude Include="SME_Prefix.h" />
     <ClInclude Include="SoundStruct.h" />
   </ItemGroup>
   <ItemGroup>

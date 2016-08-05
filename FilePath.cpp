@@ -3,10 +3,12 @@
 #include "shlwapi.h"
 #include <algorithm>
 
+#include "GlobalSettings.h"
+
 
 
 const string currentOblivionPath = GetOblivionDirectory ();
-
+const string supportedExtensions[] = { ".mp3", ".wav", ".wma" };
 
 
 bool exists (const string& path) {
@@ -68,6 +70,19 @@ bool endsWith (const string& str, const string& ending) {
 	}
 }
 
+
+
+bool endsWithAny (const string& str, const string endings[]) {
+	for (int i = 0, n = arraySize (endings, string); i < n; i++) {
+		if (endsWith (str, endings[i])) {
+			return true;
+		}
+	}
+	return false;
+}
+
+
+
 bool endsNotWith (const string& str, const string& ending) {
 	int strLen = str.length ();
 	int endLen = ending.length ();
@@ -76,4 +91,15 @@ bool endsNotWith (const string& str, const string& ending) {
 	} else {
 		return true;
 	}
+}
+
+
+
+bool endsNotWithAll (const string& str, const string endings[]) {
+	for (int i = 0, n = arraySize (endings, string); i < n; i++) {
+		if (!endsNotWith (str, endings[i])) {
+			return false;
+		}
+	}
+	return true;
 }

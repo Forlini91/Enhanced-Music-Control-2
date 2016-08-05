@@ -16,6 +16,9 @@
     <Filter Include="StructsEnum">
       <UniqueIdentifier>{fc2fddbd-3a59-4760-8ee8-ff6a49b0476f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="MusicPlayer">
+      <UniqueIdentifier>{3c7bda1e-ba45-4710-a20c-721827cb4749}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\obse\obse\GameAPI.cpp">
@@ -75,25 +78,33 @@
       <Filter>Threads</Filter>
     </ClCompile>
     <ClCompile Include="Commands.cpp" />
-    <ClCompile Include="PlayMusicFile.cpp" />
-    <ClCompile Include="MusicState.cpp" />
     <ClCompile Include="Playlist.cpp" />
     <ClCompile Include="MainThread.cpp">
       <Filter>Threads</Filter>
     </ClCompile>
-    <ClCompile Include="MusicPlayer.cpp" />
     <ClCompile Include="Multiplier.cpp" />
     <ClCompile Include="FilePath.cpp" />
     <ClCompile Include="ThreadRequest.cpp">
       <Filter>Threads</Filter>
     </ClCompile>
-    <ClCompile Include="ActivePlaylist.cpp">
-      <Filter>StructsEnum</Filter>
-    </ClCompile>
-    <ClCompile Include="EMC2INISettings.cpp" />
-    <ClCompile Include="ThreadState.cpp" />
     <ClCompile Include="MainGameVarsPointer.cpp">
       <Filter>StructsEnum</Filter>
+    </ClCompile>
+    <ClCompile Include="ThreadState.cpp">
+      <Filter>Threads</Filter>
+    </ClCompile>
+    <ClCompile Include="ActivePlaylist.cpp" />
+    <ClCompile Include="EMC2INISettings.cpp">
+      <Filter>INI</Filter>
+    </ClCompile>
+    <ClCompile Include="MusicPlayer.cpp">
+      <Filter>MusicPlayer</Filter>
+    </ClCompile>
+    <ClCompile Include="MusicState.cpp">
+      <Filter>MusicPlayer</Filter>
+    </ClCompile>
+    <ClCompile Include="PlayMusicFile.cpp">
+      <Filter>MusicPlayer</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -157,11 +168,6 @@
     <ClInclude Include="INIManager.h">
       <Filter>INI</Filter>
     </ClInclude>
-    <ClInclude Include="SME_Prefix.h">
-      <Filter>INI</Filter>
-    </ClInclude>
-    <ClInclude Include="MusicPlayer.h" />
-    <ClInclude Include="GlobalSettings.h" />
     <ClInclude Include="Hooks.h" />
     <ClInclude Include="Commands.h" />
     <ClInclude Include="MainThread.h">
@@ -176,7 +182,6 @@
     <ClInclude Include="FadeThread.h">
       <Filter>Threads</Filter>
     </ClInclude>
-    <ClInclude Include="PlayMusicFile.h" />
     <ClInclude Include="MainGameVarsPointer.h">
       <Filter>StructsEnum</Filter>
     </ClInclude>
@@ -198,11 +203,21 @@
     </ClInclude>
     <ClInclude Include="Multiplier.h" />
     <ClInclude Include="FilePath.h" />
-    <ClInclude Include="ActivePlaylist.h">
-      <Filter>StructsEnum</Filter>
-    </ClInclude>
     <ClInclude Include="VanillaPlaylistData.h">
       <Filter>StructsEnum</Filter>
+    </ClInclude>
+    <ClInclude Include="GlobalSettings.h">
+      <Filter>StructsEnum</Filter>
+    </ClInclude>
+    <ClInclude Include="ActivePlaylist.h" />
+    <ClInclude Include="SME_Prefix.h">
+      <Filter>INI</Filter>
+    </ClInclude>
+    <ClInclude Include="MusicPlayer.h">
+      <Filter>MusicPlayer</Filter>
+    </ClInclude>
+    <ClInclude Include="PlayMusicFile.h">
+      <Filter>MusicPlayer</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -216,7 +231,9 @@
       <Filter>obse</Filter>
     </None>
     <None Include="exports.def" />
-    <None Include="MusicState.h" />
+    <None Include="MusicState.h">
+      <Filter>MusicPlayer</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="obse_plugin_example.rc" />

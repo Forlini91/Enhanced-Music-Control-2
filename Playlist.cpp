@@ -10,6 +10,8 @@ using namespace std;
 
 
 
+
+
 HANDLE hPlaylistMutex;		//"Playlist" Mutex.  Lock when reading/manipulating any of the playlists.
 Playlist* vanillaPlaylists[8];
 PlaylistsMap playlists;
@@ -232,7 +234,7 @@ bool Playlist::buildPath (const string& path, bool add) {
 			//This will prevent ".." from being seen as a file.
 			if (fileName == ".." || (FindFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY) {
 				continue;
-			} else if (endsNotWith (fileName, ".mp3") && endsNotWith (fileName, ".wav") && endsNotWith (fileName, ".wma")) {
+			} else if (endsNotWithAll (fileName, supportedExtensions)) {
 				continue;
 			}
 			

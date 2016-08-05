@@ -133,7 +133,7 @@ bool MusicPlayer::queueTrack (const string& trackName, REFERENCE_TIME position) 
 		if (trackName.empty ()) {
 			_MESSAGE ("MusicPlayer >> No track available");
 			return false;
-		} else if (exists(trackName)) {
+		} else if (exists (trackName) && !isDirectory (trackName) && endsWithAny (trackName, supportedExtensions)) {
 			double pos = position / ONCE_SECOND;
 			_MESSAGE ("MusicPlayer >> Queue new track >> %s (position: %.2f)", trackName.c_str(), pos);
 			queuedTrack = QueuedTrack (trackName, position);

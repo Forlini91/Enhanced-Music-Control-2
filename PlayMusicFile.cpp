@@ -52,7 +52,7 @@ bool playMusicFile (const string& path) {
 			string fileName = FindFileData.cFileName;
 			if (fileName == ".." || (FindFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY) {
 				continue;
-			} else if (endsNotWith (fileName, ".mp3") && endsNotWith (fileName, ".wav") && endsNotWith (fileName, ".wma")) {
+			} else if (endsNotWithAll (fileName, supportedExtensions)) {
 				continue;
 			}
 
