@@ -10,6 +10,11 @@
 
 
 
+#define EMPLACE_PLAYLIST(name,paths,randomOrder,vanillaPlaylist) playlists.emplace (BUILD_IN_PLACE(name, name, paths, randomOrder, vanillaPlaylist))
+#define EMPLACE_PLAYLIST_UNDEF(name,vanillaPlaylist) playlists.emplace (BUILD_IN_PLACE(name, name, vanillaPlaylist))
+#define GET_EMPLACED(x) x.first->second
+
+
 
 using namespace std;
 

@@ -28,7 +28,6 @@ Multiplier::~Multiplier () {
 		delete value;
 	}
 	CloseHandle (hThread);
-
 }
 
 
@@ -58,30 +57,37 @@ bool Multiplier::setValueLimit (float newValue, float limit) {
 
 
 
-void Multiplier::fadeVolume (float newTargetValue, float newFadeTime) {
+FadeThreadState Multiplier::fadeVolume (float newTargetValue, float newFadeTime) {
 	//Assume the calling function waited for the mutex
 	startValue = *value;
 	targetValue = clamp (newTargetValue, 0, 1);
-	fadeTime = newFadeTime;
+	fadeTime = newFadeTime > 0 ? newFadeTime : 0;
 	if (isFading) {
-		_MESSAGE ("Command >> emcSetMusicVolume >> Update fade thread");
-		if (startValue == targetValue) {
+		if (startValue == targetValue || fadeTime == 0) {
+			_MESSAGE ("Command >> emcSetMusicVolume >> Stop fade thread");
 			isFading = false;
 			setValue (targetValue);
+			return FadeThreadState::ft_Stopped;
 		} else {
+			_MESSAGE ("Command >> emcSetMusicVolume >> Update fade thread");
 			isChanged = true;
+			return FadeThreadState::ft_Updated;
 		}
 	} else {
-		if (startValue == targetValue) {
+		if (startValue == targetValue || fadeTime == 0) {
 			setValue (targetValue);
+			return FadeThreadState::ft_NotRunning;
 		} else {
-			_MESSAGE ("Command >> emcSetMusicVolume >> Begin fade thread");
+			_MESSAGE ("Command >> emcSetMusicVolume >> Start fade thread");
 			isFading = true;
 			_beginthread (FadeThread, 0, this);
+			return FadeThreadState::ft_Started;
 		}
 	}
 	//Assume the calling function will release the mutex
 }
+
+
 
 volatile float Multiplier::operator<<(volatile float *var) {
 	value = var;

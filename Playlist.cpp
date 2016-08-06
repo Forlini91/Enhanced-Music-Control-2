@@ -12,9 +12,9 @@ using namespace std;
 
 
 
-HANDLE hPlaylistMutex;		//"Playlist" Mutex.  Lock when reading/manipulating any of the playlists.
-Playlist *vanillaPlaylists[8];
-PlaylistsMap playlists;
+Playlist *vanillaPlaylists[8];		//The 8 vanilla playlists: {Explore,Public,Dungeon,Custom,Battle,Death,Success,Title}
+PlaylistsMap playlists;				//All vanilla and custom playlists
+HANDLE hPlaylistMutex = CreateMutex (nullptr, FALSE, nullptr);		//Lock when using the object "playlists".
 const string emptyStr;
 
 

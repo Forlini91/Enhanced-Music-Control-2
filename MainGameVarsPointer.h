@@ -7,3 +7,4 @@ struct MainGameVarsPointer {
 };
 
 extern MainGameVarsPointer *mainGameVars;
+extern byte *bHasQuitGame;

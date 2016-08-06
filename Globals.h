@@ -19,6 +19,9 @@ WaitForMultipleObjects (arraySize(handleSet,HANDLE), handleSet, 1, INFINITE);
 
 #define Console_PrintC(x, ...) if(inConsole)Console_Print(x, __VA_ARGS__)
 
+#define BUILD_IN_PLACE(key, ...) piecewise_construct, forward_as_tuple(key), forward_as_tuple(__VA_ARGS__) 
+
+
 
 
 //Quick code

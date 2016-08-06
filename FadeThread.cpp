@@ -9,11 +9,6 @@
 
 
 void FadeThread (void *voidMultiplier) {
-	while (!mainGameVars->gameVars) {
-		Sleep (100);
-	}
-
-	byte *bHasQuitGame = &mainGameVars->gameVars->bHasQuitGame;
 	Multiplier *mult = static_cast<Multiplier*>(voidMultiplier);
 	LockHandle (mult->hThread);
 		if (*bHasQuitGame != 0 || mult->isDestroyed || !mult->isFading) {
@@ -27,18 +22,18 @@ void FadeThread (void *voidMultiplier) {
 			Sleep (sleepTime);
 			while (true) {
 				LockHandle (mult->hThread);
-				if (*bHasQuitGame != 0 || mult->isDestroyed || !mult->isFading) {
-					_MESSAGE ("Fade Thread >> Thread stopped by external events");
-					break;
-				} else if (mult->isChanged) {
-					mult->isChanged = false;
-					sleepTime = mult->fadeTime * 1000 / FADE_STEPS;
-					volStep = (mult->targetValue - mult->startValue) / FADE_STEPS;
-					_MESSAGE ("Fade Thread >> Update: Start: %f, End: %f, Time: %f, Current: %f, Step: %f, Sleep: %d", mult->startValue, mult->targetValue, mult->fadeTime, mult->getValue (), volStep, sleepTime);
-				} else if (mult->setValueLimit (mult->getValue () + volStep, mult->targetValue)) {
-					_MESSAGE ("Fade Thread >> Stop thread: target value reached");
-					break;
-				}
+					if (*bHasQuitGame != 0 || mult->isDestroyed || !mult->isFading) {
+						_MESSAGE ("Fade Thread >> Thread stopped by external events");
+						break;
+					} else if (mult->isChanged) {
+						mult->isChanged = false;
+						sleepTime = mult->fadeTime * 1000 / FADE_STEPS;
+						volStep = (mult->targetValue - mult->startValue) / FADE_STEPS;
+						_MESSAGE ("Fade Thread >> Update: Start: %f, End: %f, Time: %f, Current: %f, Step: %f, Sleep: %d", mult->startValue, mult->targetValue, mult->fadeTime, mult->getValue (), volStep, sleepTime);
+					} else if (mult->setValueLimit (mult->getValue () + volStep, mult->targetValue)) {
+						_MESSAGE ("Fade Thread >> Stop thread: target value reached");
+						break;
+					}
 				UnlockHandle (mult->hThread);
 				Sleep (sleepTime);
 			}

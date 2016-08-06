@@ -4,8 +4,7 @@
 //  me with the orientation I needed to get started.  He also provided
 //  me with some help when I asked.  Thanks alot!
 //Kumar Prabhu - The DS Player sample application from CodeProject gave me
-//  my orientation into DirectShow.  Hope my implimentation is allright.
-//Peter Chen - For providing CPath for general non-profit use.
+//  my orientation into DirectShow.  Hope my implimentation is alright.
 //
 //And numerous other places and people around the net as I Googled my problems.
 
@@ -18,9 +17,6 @@
 //  Just need to find the point in code where BINKs are started and stopped.
 //  Okay, maybe it is a little harder than I say.  :P  Anyone have any ideas
 //  that will get me along faster?
-//The Success music does not stop playing until its played through totally
-//  once.  I would like it to stop playing as soon as the levelup menu is
-//  closed, instead, but I haven't figured out how to do it yet.
 
 //Known Non-Issues
 //When you save a game, the current music type is saved with it.  If you die,
@@ -41,17 +37,12 @@
 
 //Project includes
 #include "Globals.h"
-#include "VanillaPlaylistData.h"
 #include "SafeWrite/SafeWrite.h"
 #include "Multiplier.h"
 #include "MusicType.h"
 #include "MusicState.h"
-#include "Playlist.h"
-#include "ActivePlaylist.h"
 #include "Hooks.h"
-#include "EMC2INISettings.h"
 #include "Commands.h"
-#include "ThreadState.h"
 #include "MainThread.h"
 #include "OBSEInterfaces.h"
 
@@ -69,10 +60,10 @@ IDebugLog gLog("enhanced_music_control_2.log");
 static void EMC2_SaveCallback(void *reserved) {
 	_MESSAGE("Event >> SaveGame");
 	LockHandle (hMusicStateMutex);
-		MusicType save = (music.GetWorldMusic());
+		MusicType worldType = music.getWorldType();
 	UnlockHandle (hMusicStateMutex);
 
-	string dataString = to_string (save);
+	string dataString = to_string (worldType);
 	g_serialization->OpenRecord('EMCT', 0);
 	g_serialization->WriteRecordData(dataString.c_str(), dataString.length());
 }
@@ -94,8 +85,8 @@ static void EMC2_LoadCallback(void *reserved) {
 			g_serialization->ReadRecordData(buf, length);
 			buf[length] = 0;
 			LockHandle (hMusicStateMutex);
-				music.world = MusicType (atoi (buf));
-				music.state = MusicType::Mt_NotKnown;
+				music.setWorldType (static_cast<MusicType>(atoi (buf)));
+				music.setEventType (MusicType::Mt_NotKnown);
 			UnlockHandle (hMusicStateMutex);
 			_MESSAGE("Event >> LoadGame >> World music: %s", buf);
 			break;
@@ -119,8 +110,8 @@ static void EMC2_LoadCallback(void *reserved) {
 static void EMC2_NewGameCallback(void *reserved) {
 	_MESSAGE("Event >> NewGame");
 	LockHandle (hMusicStateMutex);
-		music.world = MusicType::Dungeon;			//Should be fine for your vanilla Oblivion.
-		music.state = MusicType::Mt_NotKnown;
+		music.setWorldType (MusicType::Dungeon);			//Should be fine for your vanilla Oblivion.
+		music.setEventType (MusicType::Mt_NotKnown);
 	UnlockHandle (hMusicStateMutex);
 
 	for (MultipliersMap::iterator it = multipliersCustom.begin (); it != multipliersCustom.end (); it++) {
@@ -211,12 +202,6 @@ extern "C" {
 			return true;	//Oblivion version is not supported. Stop right there.
 		}
 
-
-		void *obSetMusicVolume = (void *)0x006AA1A0;
-		void *obQueueMusicTrack = (void *)0x006AB160;
-		void *obPlayQueuedMusicTrack = (void *)0x006AB420;
-		void *obGetIsInCombat = (void *)0x006605A0;
-
 		//Register commands
 		//I was assigned the following opCode ranges:  0x24C0-0x24DF, 0x2840-0x284F
 		obse->SetOpcodeBase(0x24C0);
@@ -271,13 +256,8 @@ extern "C" {
 		obse->RegisterCommand		(&kMusicRestartCommand);						//284E
 		obse->RegisterCommand		(&kMusicNextTrackCommand);						//284F
 
-		//Initialize the Mutex so Main thread knows when its safe to read or alter global variables.
-		hMusicStateMutex = CreateMutex(nullptr, FALSE, nullptr);  // Starts cleared, no owner
-		hMusicPlayerMutex = CreateMutex(nullptr, FALSE, nullptr);
-		hPlaylistMutex = CreateMutex(nullptr, FALSE, nullptr);
-		hThreadMutex = CreateMutex(nullptr, FALSE, nullptr);
 
-		
+
 		// set up serialization callbacks when running in the runtime
 		if (!obse->isEditor) {
 			// NOTE: SERIALIZATION DOES NOT WORK USING THE DEFAULT OPCODE BASE IN RELEASE BUILDS OF OBSE
@@ -308,21 +288,6 @@ extern "C" {
 			WriteRelJump (0x00660697, (UInt32)&DetectNotBattleMusic_1);
 			WriteRelJump (0x00660691, (UInt32)&DetectNotBattleMusic_2);
 			WriteRelJump (0x006AC026, 0x006AC056);	// Stop Oblivion from writing current volume levels to INI. The audio menu does it anyway.
-
-
-			iniSettings.Initialize (INI_PATH, nullptr);
-			iniSettings.applySettings ();
-
-			_MESSAGE ("Create default playlists");
-
-			apl_Explore	.initialize	(0, &GET_EMPLACED (EMPLACE_PLAYLIST (obExplore, obExplorePath, true, true)));
-			apl_Public	.initialize	(1, &GET_EMPLACED (EMPLACE_PLAYLIST (obPublic, obPublicPath, true, true)));
-			apl_Dungeon	.initialize	(2, &GET_EMPLACED (EMPLACE_PLAYLIST (obDungeon, obDungeonPath, true, true)));
-			apl_Custom	.initialize	(3, &GET_EMPLACED (EMPLACE_PLAYLIST_UNDEF (obCustom, true)));
-			apl_Battle	.initialize	(4, &GET_EMPLACED (EMPLACE_PLAYLIST (obBattle, obBattlePath, true, true)));
-			apl_Death	.initialize	(5, &GET_EMPLACED (EMPLACE_PLAYLIST (obDeath, obDeathPath, true, true)));
-			apl_Success	.initialize	(6, &GET_EMPLACED (EMPLACE_PLAYLIST (obSuccess, obSuccessPath, true, true)));
-			apl_Title	.initialize	(7, &GET_EMPLACED (EMPLACE_PLAYLIST (obTitle, obTitlePath, true, true)));
 
 			_beginthread (MainThread, 0, nullptr);
 		}

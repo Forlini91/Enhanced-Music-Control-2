@@ -10,7 +10,7 @@
 
 
 ThreadRequest threadRequest;
-HANDLE hThreadMutex;		//"Thread" Mutex.  Lock when using the object threadState.
+HANDLE hThreadMutex = CreateMutex (nullptr, FALSE, nullptr);		//Lock when using the object threadState.
 
 
 
@@ -119,7 +119,7 @@ void ThreadRequest::requestSetPlaylist (Playlist *playlist, MusicType musicType,
 	UnlockHandle (hMusicPlayerMutex);
 
 	LockHandle (hMusicStateMutex);
-		MusicType currentMusicType = music.GetCurrentMusicType (false);
+		MusicType currentMusicType = music.getCurrentMusicType (false, true);
 	UnlockHandle (hMusicStateMutex);
 
 	LockHandle (hThreadMutex);
@@ -154,9 +154,9 @@ void ThreadRequest::requestSetPlaylist (Playlist *playlist, MusicType musicType,
 
 void ThreadRequest::requestResetPlaylist (MusicType musicType) {
 	LockHandle (hMusicStateMutex);
-		MusicType realMusicType = music.GetRealMusicType ();
+		MusicType currentMusicType = music.getCurrentMusicType (false, false);
 	UnlockHandle (hMusicStateMutex);
-	if (musicType == MusicType::Undefined || musicType == realMusicType) {
+	if (musicType == MusicType::Undefined || musicType == currentMusicType) {
 		LockHandle (hThreadMutex);
 			PlayNextTrack = true;
 			Swap_MusicType_Next = musicType;

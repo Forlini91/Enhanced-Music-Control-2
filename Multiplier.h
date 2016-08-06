@@ -10,6 +10,15 @@ using namespace std;
 
 
 
+enum FadeThreadState {
+	ft_NotRunning,
+	ft_Started,
+	ft_Updated,
+	ft_Stopped
+};
+
+
+
 struct Multiplier {
 
 private:
@@ -40,7 +49,7 @@ public:
 
 	bool setValueLimit (float newValue, float limit);
 
-	void fadeVolume (float targetValue, float fadeTime);
+	FadeThreadState fadeVolume (float targetValue, float fadeTime);
 
 	volatile float operator<< (volatile float *var);
 };

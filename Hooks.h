@@ -8,18 +8,29 @@
 
 
 
+
+static void *obSetMusicVolume = (void *)0x006AA1A0;
+static void *obQueueMusicTrack = (void *)0x006AB160;
+static void *obPlayQueuedMusicTrack = (void *)0x006AB420;
+static void *obGetIsInCombat = (void *)0x006605A0;
+
+
+
+
 int *streamSelectedType = new int (0);
 char *streamSelectedText = new char[200];
 //MusicType of the World (Explore, Public, or Dungeon)
-//MusicTypes currentWorldMusicType = NotKnown;
-MusicType *currentWorldMusicType = &music.world;
+//MusicTypes worldType = NotKnown;
+MusicType *worldType = music.getWorldTypePtr ();
+
 //MusicType the game should be playing.
 //MusicTypes currentDesiredMusicType = NotKnown;
-MusicType *currentStateMusicType = &music.state;
+MusicType *eventType = music.getEventTypePtr ();
+
 //Remember to change this before you change the above.
 //Otherwise sentry thread may execute music twice.
-//SpecialMusicTypes specialMusicType = Death;
-SpecialMusicType *specialMusicType = &music.special;
+//specialTypes specialType = Death;
+SpecialMusicType *specialType = music.getSpecialTypePtr ();
 
 
 
@@ -54,7 +65,7 @@ _declspec(naked) void QueueMusicTrack (void) {
 			test al, al							//If EAX (the return value) != 0
 			pop esi
 			pop ecx
-			mov ebx, specialMusicType
+			mov ebx, specialType
 			jnz PlayerDead						//Then jump!
 			mov[ebx], Sp_NotKnown				//Set the special music to NotKnown.
 			pop eax
@@ -63,7 +74,7 @@ _declspec(naked) void QueueMusicTrack (void) {
 		mov[ebx], Death					//Set the special music to Death.
 			pop eax
 		DoNormal :
-		mov ebx, currentWorldMusicType
+		mov ebx, worldType
 			mov[ebx], eax						//and place it into our little variable.
 			pop ebx
 			//
@@ -106,9 +117,9 @@ _declspec(naked) void DetectTitleMusic (void) {
 			pop eax
 			//
 			push ebx
-			mov ebx, specialMusicType
+			mov ebx, specialType
 			mov[ebx], Title					//Set the special music to Title.
-			mov ebx, currentStateMusicType
+			mov ebx, eventType
 			mov[ebx], Special					//Set MusicType to Special.
 			pop ebx
 			//
@@ -141,9 +152,9 @@ _declspec(naked) void DetectSuccessMusic (void) {
 			pop ecx
 			pop eax
 			push ebx
-			mov ebx, specialMusicType
-			mov[ebx], Success					//Set the special music to Title.
-			mov ebx, currentStateMusicType
+			mov ebx, specialType
+			mov[ebx], Success					//Set the special music to Success.
+			mov ebx, eventType
 			mov[ebx], Special					//Set MusicType to Special.
 			pop ebx
 			push eax
@@ -186,7 +197,7 @@ _declspec(naked) void DetectBattleMusic (void) {
 			cmp edi, ebx
 			jne Abort
 			//Else, it was the player's data.
-			mov ebx, currentStateMusicType
+			mov ebx, eventType
 			mov[ebx], Battle					//Set MusicType to Battle.
 		Abort :
 		pop ebx
@@ -225,7 +236,7 @@ _declspec(naked) void DetectNotBattleMusic_1 (void) {
 			cmp edi, ebx
 			jne Abort
 			//Else, it was the player's data.
-			mov ebx, currentStateMusicType
+			mov ebx, eventType
 			mov[ebx], Mt_NotKnown				//Set MusicType to NotKnown.
 		Abort :
 		pop ebx
@@ -268,11 +279,11 @@ _declspec(naked) void DetectNotBattleMusic_2 (void) {
 			test al, al							//If AL == 0
 			jz NoBattle							//Then Abort
 			//Else, we are in combat.
-			mov ebx, currentStateMusicType
+			mov ebx, eventType
 			mov[ebx], Battle					//Set MusicType to Battle.
 			jmp Abort
 		NoBattle :
-		mov ebx, currentStateMusicType
+		mov ebx, eventType
 			mov[ebx], Mt_NotKnown				//Set MusicType to NotKnown.
 		Abort :
 		pop ebx

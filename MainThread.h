@@ -13,7 +13,7 @@ using namespace std;
 //This is the main thread body
 void MainThread (void *throwaway);
 
-void MainThread_DelayedInitialization ();
+void MainThread_Initialization ();
 
 //This function updates musicPlayer's volume with the volume from Oblivion and the multipliers.
 //This ensures that the player can use Oblivion's audio controls to control the music.

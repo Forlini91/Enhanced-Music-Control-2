@@ -410,4 +410,4 @@ private:
 
 
 extern MusicPlayer musicPlayer;
-extern HANDLE hMusicPlayerMutex;
+extern HANDLE hMusicPlayerMutex;	//Lock when using the object "musicPlayer".

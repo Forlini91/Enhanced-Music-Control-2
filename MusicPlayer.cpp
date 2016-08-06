@@ -12,7 +12,7 @@ using namespace std;
 
 
 MusicPlayer musicPlayer;
-HANDLE hMusicPlayerMutex;	//Lock when using the object musicPlayer.
+HANDLE hMusicPlayerMutex = CreateMutex (nullptr, FALSE, nullptr);
 
 
 
@@ -64,7 +64,8 @@ MusicPlayer::~MusicPlayer () {
 bool MusicPlayer::initialize (void) {
 	if (isInitialized()) {		//Don't initialize again if already initialized.
 		return true;
-	} else if (!initializeDShow (false)) {
+	} else if (initializeDShow (false)) {
+		_MESSAGE ("Music player initialized");
 		initialized = true;
 		return true;
 	} else {

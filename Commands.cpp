@@ -37,10 +37,10 @@ bool Cmd_GetMusicType_Execute (COMMAND_ARGS) {
 
 	LockHandle (hMusicStateMutex);
 		switch (mode) {
-			case 0: *result = music.GetRealMusicType (); break;
-			case 1: *result = music.GetWorldMusic (); break;
+			case 0: *result = music.getCurrentMusicType (false, false); break;
+			case 1: *result = music.getWorldType (); break;
 			case 2: *result = music.override; break;
-			case 3: *result = music.special; break;
+			case 3: *result = music.getSpecialType (); break;
 			case 4: *result = music.locked; break;
 		}
 	UnlockHandle (hMusicStateMutex);
@@ -505,28 +505,28 @@ bool Cmd_GetPlaylistTracks_Execute (COMMAND_ARGS) {
 	string playlistName = string (pPlaylistName);
 	
 	LockHandle (hPlaylistMutex);
-	if (playlistName.empty ()) {
-		if (threadState.activePlaylist != nullptr) {
-			playlist = threadState.activePlaylist->playlist;
+		if (playlistName.empty ()) {
+			if (threadState.activePlaylist != nullptr) {
+				playlist = threadState.activePlaylist->playlist;
+			}
+		} else {
+			PlaylistsMap::iterator it = playlists.find (playlistName);
+			if (it != playlists.end ()) {
+				playlist = &it->second;
+			}
 		}
-	} else {
-		PlaylistsMap::iterator it = playlists.find (playlistName);
-		if (it != playlists.end ()) {
-			playlist = &it->second;
+		if (playlist != nullptr) {
+			OBSEArray* newArray = g_arrayIntfc->CreateArray (nullptr, 0, scriptObj);
+			for (Track track : playlist->getTracks ()) {
+				g_arrayIntfc->AppendElement (newArray, track.c_str ());
+			}
+			g_arrayIntfc->AssignCommandResult (newArray, result);
+			if (inConsole) {
+				playlist->printTracks ();
+			}
+		} else {
+			Console_PrintC ("Playlist not found");
 		}
-	}
-	if (playlist != nullptr) {
-		OBSEArray* newArray = g_arrayIntfc->CreateArray (nullptr, 0, scriptObj);
-		for (Track track : playlist->getTracks ()) {
-			g_arrayIntfc->AppendElement (newArray, track.c_str ());
-		}
-		g_arrayIntfc->AssignCommandResult (newArray, result);
-		if (inConsole) {
-			playlist->printTracks ();
-		}
-	} else {
-		Console_PrintC ("Playlist not found");
-	}
 	UnlockHandle (hPlaylistMutex);
 	return true;
 }
@@ -602,7 +602,7 @@ bool Cmd_SetTrackPosition_Execute (COMMAND_ARGS) {
 //Returns 1 if the override is active, else 0.
 bool Cmd_IsBattleOverridden_Execute (COMMAND_ARGS) {
 	*result = music.battleOverridden ? 1 : 0;
-	Console_PrintC ("Battle overridde >> %.0f", *result);
+	Console_PrintC ("Battle overridden >> %.0f", *result);
 	return true;
 }
 
@@ -783,16 +783,9 @@ bool Cmd_SetMusicVolume_Execute (COMMAND_ARGS) {
 	if (method < 2) {
 		mult = (method == 0) ? &multObMusic : &multObMusicIni;
 		LockHandle (mult->hThread);
-			if (fadeTime > 0) {
-				Console_PrintC ("Set music volume >> Fade volume from %f to %f, Method: %d, Time: %f", mult->getValue (), volume, method, fadeTime);
-				_MESSAGE ("Command >> emcSetMusicVolume >> Fade volume from %f to %f, Method: %d, Time: %f", mult->getValue (), volume, method, fadeTime);
-				mult->fadeVolume (volume, fadeTime);
-			} else {
-				Console_PrintC ("Set music volume >> Change volume from %f to %f, Method: %d", mult->getValue (), volume, method);
-				_MESSAGE ("Command >> emcSetMusicVolume >> Change volume from %f to %f, Method: %d", mult->getValue (), volume, method);
-				mult->isFading = false;
-				mult->setValue (volume);
-			}
+			Console_PrintC ("Set music volume >> Set/Fade volume from %f to %f, Method: %d, Time: %f", mult->getValue (), volume, method, fadeTime);
+			_MESSAGE ("Command >> emcSetMusicVolume >> Set/Fade volume from %f to %f, Method: %d, Time: %f", mult->getValue (), volume, method, fadeTime);
+			mult->fadeVolume (volume, fadeTime);
 		UnlockHandle (mult->hThread);
 	} else {
 		string key = string (pKey);
