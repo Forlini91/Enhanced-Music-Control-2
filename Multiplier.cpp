@@ -63,7 +63,7 @@ FadeThreadState Multiplier::fadeVolume (float newTargetValue, float newFadeTime)
 	targetValue = clamp (newTargetValue, 0, 1);
 	fadeTime = newFadeTime > 0 ? newFadeTime : 0;
 	if (isFading) {
-		if (startValue == targetValue || fadeTime == 0) {
+		if (startValue == targetValue || fadeTime <= 0) {
 			_MESSAGE ("Command >> emcSetMusicVolume >> Stop fade thread");
 			isFading = false;
 			setValue (targetValue);
@@ -74,7 +74,7 @@ FadeThreadState Multiplier::fadeVolume (float newTargetValue, float newFadeTime)
 			return FadeThreadState::ft_Updated;
 		}
 	} else {
-		if (startValue == targetValue || fadeTime == 0) {
+		if (startValue == targetValue || fadeTime <= 0) {
 			setValue (targetValue);
 			return FadeThreadState::ft_NotRunning;
 		} else {
@@ -90,6 +90,5 @@ FadeThreadState Multiplier::fadeVolume (float newTargetValue, float newFadeTime)
 
 
 volatile float Multiplier::operator<<(volatile float *var) {
-	value = var;
-	return *value;
+	return *(value = var);
 }

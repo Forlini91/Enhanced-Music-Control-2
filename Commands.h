@@ -144,8 +144,6 @@ static CommandInfo kSetPlaylistCommand = {
 
 
 
-//Optional Input: 1 Int
-//Return value has no meaning.
 bool Cmd_RestorePlaylist_Execute (COMMAND_ARGS);
 static ParamInfo kParams_RestorePlaylist[1] = {
 	{"music type", kParamType_Integer, 1},
@@ -230,16 +228,16 @@ static CommandInfo kGetPlaylistTracksCommand = {
 
 
 
-bool Cmd_GetTrackName_Execute (COMMAND_ARGS);
-static CommandInfo kGetTrackNameCommand = {
-	"emcGetTrackName",
+bool Cmd_GetTrack_Execute (COMMAND_ARGS);
+static CommandInfo kGetTrackCommand = {
 	"emcGetTrack",
+	"",
 	0,
 	"Gets the name of the current track.",
 	0,
 	0,
 	nullptr,
-	Cmd_GetTrackName_Execute
+	Cmd_GetTrack_Execute
 };
 
 
@@ -631,105 +629,109 @@ static CommandInfo kSetPauseTimeCommand = {
 
 
 
-bool Cmd_GetBattleDelay_Execute (COMMAND_ARGS);
-static ParamInfo kParams_GetBattleDelay[1] = {
-	{"get extra delay", kParamType_Integer, 1},
+bool Cmd_GetStartBattleDelay_Execute (COMMAND_ARGS);
+static ParamInfo kParams_GetStartBattleDelay[1] = {
+	{"min/extra/cur battle delay", kParamType_Integer, 1},
 };
-static CommandInfo kGetBattleDelayCommand = {
-	"emcGetBattleDelay",
+static CommandInfo kGetStartBattleDelayCommand = {
+	"emcGetStartBattleDelay",
 	"",
 	0,
 	"Get how many seconds the battle must last before the battle music start.",
 	0,
 	1,
-	kParams_GetBattleDelay,
-	Cmd_GetBattleDelay_Execute
+	kParams_GetStartBattleDelay,
+	Cmd_GetStartBattleDelay_Execute
 };
 
 
 
-bool Cmd_SetBattleDelay_Execute (COMMAND_ARGS);
-static ParamInfo kParams_SetBattleDelay[3] = {
+bool Cmd_SetStartBattleDelay_Execute (COMMAND_ARGS);
+static ParamInfo kParams_SetStartBattleDelay[3] = {
 	{"min delay", kParamType_Float, 0},
 	{"extra delay", kParamType_Float, 1},
 	{"force update", kParamType_Integer, 1},
 };
-static CommandInfo kSetBattleDelayCommand = {
-	"emcSetBattleDelay",
+static CommandInfo kSetStartBattleDelayCommand = {
+	"emcSetStartBattleDelay",
 	"",
 	0,
 	"Set how many seconds the battle must last before the battle music start (Min: 0.5 secs).",
 	0,
 	3,
-	kParams_SetBattleDelay,
-	Cmd_SetBattleDelay_Execute
+	kParams_SetStartBattleDelay,
+	Cmd_SetStartBattleDelay_Execute
 };
 
 
 
-bool Cmd_GetAfterBattleDelay_Execute (COMMAND_ARGS);
-static ParamInfo kParams_GetAfterBattleDelay[1] = {
-	{"get extra delay", kParamType_Integer, 1},
+bool Cmd_GetStopBattleDelay_Execute (COMMAND_ARGS);
+static ParamInfo kParams_GetStopBattleDelay[1] = {
+	{"min/extra/cur battle delay", kParamType_Integer, 1},
 };
-static CommandInfo kGetAfterBattleDelayCommand = {
-	"emcGetAfterBattleDelay",
+static CommandInfo kGetStopBattleDelayCommand = {
+	"emcGetStopBattleDelay",
 	"",
 	0,
 	"Get how many seconds must pass after battle ended before the battle music ends.",
 	0,
 	1,
-	kParams_GetAfterBattleDelay,
-	Cmd_GetAfterBattleDelay_Execute
+	kParams_GetStopBattleDelay,
+	Cmd_GetStopBattleDelay_Execute
 };
 
 
 
-bool Cmd_SetAfterBattleDelay_Execute (COMMAND_ARGS);
-static ParamInfo kParams_SetAfterBattleDelay[3] = {
+bool Cmd_SetStopBattleDelay_Execute (COMMAND_ARGS);
+static ParamInfo kParams_SetStopBattleDelay[3] = {
 	{"min delay", kParamType_Float, 0},
 	{"extra delay", kParamType_Float, 1},
 	{"force update", kParamType_Integer, 1},
 };
-static CommandInfo kSetAfterBattleDelayCommand = {
-	"emcSetAfterBattleDelay",
+static CommandInfo kSetStopBattleDelayCommand = {
+	"emcSetStopBattleDelay",
 	"",
 	0,
 	"Set how many seconds must pass after battle ended before the battle music ends.",
 	0,
 	3,
-	kParams_SetAfterBattleDelay,
-	Cmd_SetAfterBattleDelay_Execute
+	kParams_SetStopBattleDelay,
+	Cmd_SetStopBattleDelay_Execute
 };
 
 
 
-bool Cmd_GetMaxRestoreTime_Execute (COMMAND_ARGS);
-static CommandInfo kGetMaxRestoreTimeCommand = {
-	"emcGetMaxRestoreTime",
+bool Cmd_GetMusicRememberTime_Execute (COMMAND_ARGS);
+static ParamInfo kParams_GetMusicRememberTime[1] = {
+	{"battle music", kParamType_Integer, 1},
+};
+static CommandInfo kGetMusicRememberTimeCommand = {
+	"emcGetMusicRememberTime",
 	"",
 	0,
 	"Get how many seconds the player remember the previous playlist.",
 	0,
-	0,
-	nullptr,
-	Cmd_GetMaxRestoreTime_Execute
+	1,
+	kParams_GetMusicRememberTime,
+	Cmd_GetMusicRememberTime_Execute
 };
 
 
 
-bool Cmd_SetMaxRestoreTime_Execute (COMMAND_ARGS);
-static ParamInfo kParams_SetMaxRestoreTime[1] = {
-	{"max restore time", kParamType_Float, 0},
+bool Cmd_SetMusicRememberTime_Execute (COMMAND_ARGS);
+static ParamInfo kParams_SetMusicRememberTime[2] = {
+	{"remember time", kParamType_Float, 0},
+	{"battle music", kParamType_Integer, 1},
 };
-static CommandInfo kSetMaxRestoreTimeCommand = {
+static CommandInfo kSetMusicRememberTimeCommand = {
 	"emcSetMaxRestoreTime",
 	"",
 	0,
 	"Set how many seconds the player remember the previous playlist.",
 	0,
-	1,
-	kParams_SetMaxRestoreTime,
-	Cmd_SetMaxRestoreTime_Execute
+	2,
+	kParams_SetMusicRememberTime,
+	Cmd_SetMusicRememberTime_Execute
 };
 
 

@@ -22,14 +22,15 @@ bool ActivePlaylist::restorePlaylist () {
 
 
 
-ActivePlaylist apl_Explore ("Explore", MusicType::Explore, SpecialMusicType::Sp_NotKnown);
-ActivePlaylist apl_Public ("Public", MusicType::Public, SpecialMusicType::Sp_NotKnown);
-ActivePlaylist apl_Dungeon ("Dungeon", MusicType::Dungeon, SpecialMusicType::Sp_NotKnown);
-ActivePlaylist apl_Custom ("Custom", MusicType::Custom, SpecialMusicType::Sp_NotKnown);
-ActivePlaylist apl_Battle ("Battle", MusicType::Battle, SpecialMusicType::Sp_NotKnown);
-ActivePlaylist apl_Death ("Death", MusicType::Special, SpecialMusicType::Death);
-ActivePlaylist apl_Success ("Success", MusicType::Special, SpecialMusicType::Success);
-ActivePlaylist apl_Title ("Title", MusicType::Special, SpecialMusicType::Title);
+ActivePlaylist apl_Explore ("Explore", MusicType::mtExplore, SpecialMusicType::spNotKnown);
+ActivePlaylist apl_Public ("Public", MusicType::mtPublic, SpecialMusicType::spNotKnown);
+ActivePlaylist apl_Dungeon ("Dungeon", MusicType::mtDungeon, SpecialMusicType::spNotKnown);
+ActivePlaylist apl_Custom ("Custom", MusicType::mtCustom, SpecialMusicType::spNotKnown);
+ActivePlaylist apl_Battle ("Battle", MusicType::mtBattle, SpecialMusicType::spNotKnown);
+ActivePlaylist apl_Death ("Death", MusicType::mtSpecial, SpecialMusicType::spDeath);
+ActivePlaylist apl_Success ("Success", MusicType::mtSpecial, SpecialMusicType::spSuccess);
+ActivePlaylist apl_Title ("Title", MusicType::mtSpecial, SpecialMusicType::spTitle);
+ActivePlaylist apl_NULL ("<Invalid>", MusicType::mtNotKnown, SpecialMusicType::spNotKnown);
 
 ActivePlaylist *activePlaylists[8] = {
 	&apl_Explore,
@@ -41,6 +42,8 @@ ActivePlaylist *activePlaylists[8] = {
 	&apl_Success,
 	&apl_Title
 };
+
+ActivePlaylist* selectedActivePlaylist = &apl_NULL;
 
 
 
@@ -84,6 +87,28 @@ bool operator== (const Playlist& playlist, const ActivePlaylist& apl) {
 
 
 
+bool operator!= (const ActivePlaylist &apl1, const ActivePlaylist &apl2) {
+	return apl1.playlist != apl2.playlist;
+}
+
+bool operator!= (const ActivePlaylist &apl, const Playlist *playlist) {
+	return apl.playlist != playlist;
+}
+
+bool operator!= (const Playlist *playlist, const ActivePlaylist &apl) {
+	return apl.playlist != playlist;
+}
+
+bool operator!= (const ActivePlaylist &apl, const Playlist &playlist) {
+	return *apl.playlist != playlist;
+}
+
+bool operator!= (const Playlist& playlist, const ActivePlaylist& apl) {
+	return *apl.playlist != playlist;
+}
+
+
+
 
 
 
@@ -100,7 +125,7 @@ bool isPlaylistActive (const char *playlistName) {
 
 
 
-bool isPlaylistActive (string &playlistName) {
+inline bool isPlaylistActive (string &playlistName) {
 	return isPlaylistActive (playlistName.c_str ());
 }
 
@@ -130,7 +155,7 @@ ActivePlaylist* getActivePlaylist (const char *playlistName) {
 
 
 
-ActivePlaylist* getActivePlaylist (string& playlistName) {
+inline ActivePlaylist* getActivePlaylist (string& playlistName) {
 	return getActivePlaylist(playlistName.c_str ());
 }
 
@@ -149,11 +174,11 @@ ActivePlaylist* getActivePlaylist (Playlist *playlist) {
 
 ActivePlaylist* getActivePlaylist (MusicType musicType) {
 	switch (musicType) {
-		case MusicType::Explore: return &apl_Explore;
-		case MusicType::Public: return &apl_Public;
-		case MusicType::Dungeon: return &apl_Dungeon;
-		case MusicType::Custom: return &apl_Custom;
-		case MusicType::Battle: return &apl_Battle;
+		case MusicType::mtExplore: return &apl_Explore;
+		case MusicType::mtPublic: return &apl_Public;
+		case MusicType::mtDungeon: return &apl_Dungeon;
+		case MusicType::mtCustom: return &apl_Custom;
+		case MusicType::mtBattle: return &apl_Battle;
 		default: return nullptr;
 	}
 }
@@ -162,9 +187,9 @@ ActivePlaylist* getActivePlaylist (MusicType musicType) {
 
 ActivePlaylist* getActivePlaylist (SpecialMusicType specialMusicType) {
 	switch (specialMusicType) {
-		case SpecialMusicType::Death: return &apl_Death;
-		case SpecialMusicType::Success: return &apl_Success;
-		case SpecialMusicType::Title: return &apl_Title;
+		case SpecialMusicType::spDeath: return &apl_Death;
+		case SpecialMusicType::spSuccess: return &apl_Success;
+		case SpecialMusicType::spTitle: return &apl_Title;
 		default: return nullptr;
 	}
 }
@@ -172,6 +197,7 @@ ActivePlaylist* getActivePlaylist (SpecialMusicType specialMusicType) {
 
 
 bool samePlaylist (MusicType musicType1, MusicType musicType2) {
-	return isMusicTypeValid (musicType1) && isMusicTypeValid (musicType2) &&
-		getActivePlaylist (musicType1)->playlist == getActivePlaylist (musicType2)->playlist;
+	ActivePlaylist* apl1 = getActivePlaylist (musicType1);
+	ActivePlaylist* apl2 = getActivePlaylist (musicType2);
+	return apl1 != nullptr && apl2 != nullptr && apl1->playlist == apl2->playlist;
 }

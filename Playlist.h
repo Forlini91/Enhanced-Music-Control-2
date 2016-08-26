@@ -10,19 +10,12 @@
 
 
 
-#define EMPLACE_PLAYLIST(name,paths,randomOrder,vanillaPlaylist) playlists.emplace (BUILD_IN_PLACE(name, name, paths, randomOrder, vanillaPlaylist))
-#define EMPLACE_PLAYLIST_UNDEF(name,vanillaPlaylist) playlists.emplace (BUILD_IN_PLACE(name, name, vanillaPlaylist))
-#define GET_EMPLACED(x) x.first->second
+#define emplacePlaylist(name,vanillaPlaylist) playlists.emplace (constructInPlace(name, name, vanillaPlaylist))
+#define emplacePlaylistPaths(name,paths,randomOrder,vanillaPlaylist) playlists.emplace (constructInPlace(name, name, paths, randomOrder, vanillaPlaylist))
 
 
 
 using namespace std;
-
-typedef const string& Track;
-typedef const string& Path;
-typedef const string& Paths;
-typedef vector<string> TracksList;
-typedef vector<string> PathsList;
 
 
 
@@ -32,11 +25,11 @@ private:
 
 	//The array containing the paths of the tracks in the list.
 	//Everytime curIndex cycles through the list, it will be reordered,
-	TracksList tracks;
+	vector<string> tracks;
 
 	//The directory containing the music, if we ever need it.
 	//nsPath::CPath TargetPath;
-	PathsList paths;
+	vector<string> paths;
 
 	//If true, tracks are shuffled on creation/recreation/repeat, else they always maintain the starting order
 	bool randomOrder;
@@ -48,26 +41,31 @@ private:
 	//Is playlist initialized?
 	bool initialized = false;
 
+	//Is playlist destroyed?
+	bool destroyed = false;
+
 	//If true, this is a vanilla playlist
 	const bool vanillaPlaylist;
 
 
 
 	//Tokenizes the path.
-	PathsList tokenizePaths (Paths paths) const;
+	vector<string> tokenizePaths (const string &paths) const;
 
 	//Randomly reorders the playlist, guaranteeing that the last played song
 	//will not come first in the playlist.
 	void sortTracks (bool updated);
 
 	//This function builds the playlist from the value held in TargetPath.
-	bool buildPaths (Paths paths);
+	bool buildPaths (const string &paths);
 
-	bool buildPath (Path &path, bool add);
+	bool buildPath (const string &path, bool add);
 
 
 
 public:
+
+	HANDLE hMutex = CreateMutex (nullptr, FALSE, nullptr);
 
 	//The name of this playlist.  This value may be used later to increase the capabilities
 	//of this music system.  It can be accessed by friendly classes to help manage a collection.
@@ -78,34 +76,46 @@ public:
 
 	Playlist (const char *name, bool vanillaPlaylist);
 
-	Playlist (const char *name, Paths paths, bool randomOrder, bool vanillaPlaylist);
+	Playlist (const char *name, const string &paths, bool randomOrder, bool vanillaPlaylist);
+
+	~Playlist ();
+
+	void destroy ();
+
+
 
 	//Set the given paths and build the tracks/paths vectors.
-	bool setPaths (Paths paths, bool randomOrder);
+	bool setPaths (const string &paths, bool randomOrder);
 
 	//Adds a SINGLE path to the playlist, and reinitializes it.
-	bool addPath (Path path);
+	bool addPath (const string &path);
 
 	//Gets all tracks in the playlist
-	const TracksList& Playlist::getTracks () const;
+	const vector<string>& getTracks () const;
+
+	//Check whatever the given track is present in the playlist
+	bool hasTrack (const string &track) const;
 
 	//Number of tracks in the playlist
 	int size () const;
 
-	//Should be checked before use to ensure you're trying to run with a bad playlist.
+	//Should be checked before use to ensure you're not trying to handle a playlist which failed initialization.
 	bool isInitialized () const;
+
+	//Should be checked before use to ensure you're not trying to handle a destroyed playlist.
+	bool isDestroyed () const;
 
 	//Return true if this is a vanilla playlist (and so, it can't be altered).
 	bool isVanilla () const;
 
 	//Returns the current track. Return the first track if there's still no current track.
-	Track getCurrentTrack () const;
+	const string& getCurrentTrack () const;
 
 	//Advances the playlist by one, and returns the next track
-	Track getNextTrack ();
+	const string& getNextTrack ();
 
 	//Search the given track in the playlist and restore the playlist indexes.
-	bool restoreTrackPosition (Track track);
+	bool restoreTrackIndex (const string &track);
 
 	//Copy this playlist data to the target playlist.
 	void copyTo (Playlist *copyTo) const;
@@ -121,6 +131,10 @@ public:
 
 	bool operator== (const Playlist *playlist) const;
 
+	bool operator!= (const Playlist &playlist) const;
+
+	bool operator!= (const Playlist *playlist) const;
+
 };
 
 
@@ -128,6 +142,5 @@ typedef unordered_map<string, Playlist> PlaylistsMap;
 typedef pair<PlaylistsMap::iterator, bool> PlaylistEmplaceResult;
 
 
-extern HANDLE hPlaylistMutex;
 extern Playlist *vanillaPlaylists[8];
 extern PlaylistsMap playlists;

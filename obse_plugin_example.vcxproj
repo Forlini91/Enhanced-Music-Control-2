@@ -85,6 +85,7 @@
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <ForcedIncludeFiles>obse_common/obse_prefix.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ShowIncludes>false</ShowIncludes>
     </ClCompile>
     <Link>
       <AdditionalDependencies>strmiids.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -137,13 +138,16 @@ copy "$(TargetPath)" "C:\Bethesda Softworks\Nehrim\Data\OBSE\Plugins\$(TargetFil
     <ClCompile Include="EMC2INISettings.cpp" />
     <ClCompile Include="FadeThread.cpp" />
     <ClCompile Include="IniData.cpp" />
+    <ClCompile Include="MusicInstance.cpp" />
+    <ClCompile Include="MusicTimes.cpp" />
     <ClCompile Include="MusicType.cpp" />
     <ClCompile Include="OBSEInterfaces.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MainGameVarsPointer.cpp" />
-    <ClCompile Include="MainThread.cpp" />
+    <ClCompile Include="EMCthread.cpp" />
     <ClCompile Include="Multiplier.cpp" />
     <ClCompile Include="MusicPlayer.cpp" />
+    <ClCompile Include="PendingPlaylist.cpp" />
     <ClCompile Include="Playlist.cpp" />
     <ClCompile Include="MusicState.cpp" />
     <ClCompile Include="PlayMusicFile.cpp" />
@@ -151,6 +155,7 @@ copy "$(TargetPath)" "C:\Bethesda Softworks\Nehrim\Data\OBSE\Plugins\$(TargetFil
     <ClCompile Include="FilePath.cpp" />
     <ClCompile Include="ThreadRequest.cpp" />
     <ClCompile Include="ThreadState.cpp" />
+    <ClCompile Include="TimeManagement.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\obse\obse\GameActorValues.h" />
@@ -182,10 +187,14 @@ copy "$(TargetPath)" "C:\Bethesda Softworks\Nehrim\Data\OBSE\Plugins\$(TargetFil
     <ClInclude Include="INIManager.h" />
     <ClInclude Include="MainGameVarsPointer.h" />
     <ClInclude Include="MainGameVarsStruct.h" />
-    <ClInclude Include="MainThread.h" />
+    <ClInclude Include="EMCthread.h" />
     <ClInclude Include="Multiplier.h" />
+    <ClInclude Include="MusicInstance.h" />
+    <ClInclude Include="MusicTimes.h" />
     <ClInclude Include="OBSEInterfaces.h" />
+    <ClInclude Include="PendingPlaylist.h" />
     <ClInclude Include="SME_Prefix.h" />
+    <ClInclude Include="TimeManagement.h" />
     <ClInclude Include="VanillaPlaylistData.h" />
     <ClInclude Include="MusicPlayer.h" />
     <ClInclude Include="Playlist.h" />

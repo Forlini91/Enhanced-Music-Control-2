@@ -10,34 +10,29 @@
 
 void FadeThread (void *voidMultiplier) {
 	Multiplier *mult = static_cast<Multiplier*>(voidMultiplier);
-	LockHandle (mult->hThread);
-		if (*bHasQuitGame != 0 || mult->isDestroyed || !mult->isFading) {
-			_MESSAGE ("Fade Thread >> Fade procedure not started");
-		} else {
+	WaitForSingleObject (mult->hThread, INFINITE);
+		if (*bHasQuitGame == 0 && !mult->isDestroyed && mult->isFading) {
 			int sleepTime = mult->fadeTime * 1000 / FADE_STEPS;
-			float volStep = (mult->targetValue - mult->startValue) / FADE_STEPS;
-			_MESSAGE ("Fade Thread >> Initialize: Start: %f, End: %f, Time: %f, Current: %f, Step: %f, Sleep: %d", mult->startValue, mult->targetValue, mult->fadeTime, mult->getValue (), volStep, sleepTime);
-			UnlockHandle (mult->hThread);
+			float step = (mult->targetValue - mult->startValue) / FADE_STEPS;
+			_MESSAGE ("Fade Thread >> Initialize: Start: %f, End: %f, Time: %f, Current: %f, Step: %f, Sleep: %d", mult->startValue, mult->targetValue, mult->fadeTime, mult->getValue (), step, sleepTime);
 
-			Sleep (sleepTime);
-			while (true) {
-				LockHandle (mult->hThread);
-					if (*bHasQuitGame != 0 || mult->isDestroyed || !mult->isFading) {
-						_MESSAGE ("Fade Thread >> Thread stopped by external events");
-						break;
-					} else if (mult->isChanged) {
+			for (; *bHasQuitGame != 0 || mult->isDestroyed || !mult->isFading; Sleep (sleepTime)) {
+				WaitForSingleObject (mult->hThread, INFINITE);
+					if (mult->isChanged) {
 						mult->isChanged = false;
 						sleepTime = mult->fadeTime * 1000 / FADE_STEPS;
-						volStep = (mult->targetValue - mult->startValue) / FADE_STEPS;
-						_MESSAGE ("Fade Thread >> Update: Start: %f, End: %f, Time: %f, Current: %f, Step: %f, Sleep: %d", mult->startValue, mult->targetValue, mult->fadeTime, mult->getValue (), volStep, sleepTime);
-					} else if (mult->setValueLimit (mult->getValue () + volStep, mult->targetValue)) {
+						step = (mult->targetValue - mult->startValue) / FADE_STEPS;
+						_MESSAGE ("Fade Thread >> Update: Start: %f, End: %f, Time: %f, Current: %f, Step: %f, Sleep: %d", mult->startValue, mult->targetValue, mult->fadeTime, mult->getValue (), step, sleepTime);
+					} else if (mult->setValueLimit (mult->getValue () + step, mult->targetValue)) {
 						_MESSAGE ("Fade Thread >> Stop thread: target value reached");
-						break;
+						mult->isFading = false;
 					}
-				UnlockHandle (mult->hThread);
-				Sleep (sleepTime);
+				ReleaseMutex (mult->hThread);
 			}
+			return;
+		} else {
+			_MESSAGE ("Fade Thread >> Fade procedure not started");
 		}
 		mult->isFading = false;
-	UnlockHandle (mult->hThread);
+	ReleaseMutex (mult->hThread);
 }

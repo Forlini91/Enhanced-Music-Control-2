@@ -43,8 +43,10 @@
 #include "MusicState.h"
 #include "Hooks.h"
 #include "Commands.h"
-#include "MainThread.h"
+#include "EMCthread.h"
 #include "OBSEInterfaces.h"
+
+#include "CommandTable.h"
 
 
 using namespace std;
@@ -59,9 +61,9 @@ IDebugLog gLog("enhanced_music_control_2.log");
 //EMCV - The Relative Volume.
 static void EMC2_SaveCallback(void *reserved) {
 	_MESSAGE("Event >> SaveGame");
-	LockHandle (hMusicStateMutex);
-		MusicType worldType = music.getWorldType();
-	UnlockHandle (hMusicStateMutex);
+	WaitForSingleObject (hMusicStateMutex, INFINITE);
+		MusicType worldType = musicState.getWorldType();
+	ReleaseMutex (hMusicStateMutex);
 
 	string dataString = to_string (worldType);
 	g_serialization->OpenRecord('EMCT', 0);
@@ -84,10 +86,10 @@ static void EMC2_LoadCallback(void *reserved) {
 		case 'EMCT':
 			g_serialization->ReadRecordData(buf, length);
 			buf[length] = 0;
-			LockHandle (hMusicStateMutex);
-				music.setWorldType (static_cast<MusicType>(atoi (buf)));
-				music.setEventType (MusicType::Mt_NotKnown);
-			UnlockHandle (hMusicStateMutex);
+			WaitForSingleObject (hMusicStateMutex, INFINITE);
+				musicState.setWorldType (static_cast<MusicType>(atoi (buf)));
+				musicState.setEventType (MusicType::mtNotKnown);
+			ReleaseMutex (hMusicStateMutex);
 			_MESSAGE("Event >> LoadGame >> World music: %s", buf);
 			break;
 		}
@@ -95,12 +97,12 @@ static void EMC2_LoadCallback(void *reserved) {
 
 	for (MultipliersMap::iterator it = multipliersCustom.begin (); it != multipliersCustom.end (); it++) {
 		Multiplier& mult = it->second;
-		LockHandle (mult.hThread);
+		WaitForSingleObject (mult.hThread, INFINITE);
 			if (!mult.isDestroyed && !mult.saveSession) {
 				mult.isDestroyed = true;
 				_MESSAGE ("Event >> LoadGame >> Multiplier destroyed: %s", it->first);
 			}
-		UnlockHandle (mult.hThread);
+		ReleaseMutex (mult.hThread);
 	}
 
 }
@@ -109,19 +111,19 @@ static void EMC2_LoadCallback(void *reserved) {
 
 static void EMC2_NewGameCallback(void *reserved) {
 	_MESSAGE("Event >> NewGame");
-	LockHandle (hMusicStateMutex);
-		music.setWorldType (MusicType::Dungeon);			//Should be fine for your vanilla Oblivion.
-		music.setEventType (MusicType::Mt_NotKnown);
-	UnlockHandle (hMusicStateMutex);
+	WaitForSingleObject (hMusicStateMutex, INFINITE);
+		musicState.setWorldType (MusicType::mtDungeon);			//Should be fine for your vanilla Oblivion.
+		musicState.setEventType (MusicType::mtNotKnown);
+	ReleaseMutex (hMusicStateMutex);
 
 	for (MultipliersMap::iterator it = multipliersCustom.begin (); it != multipliersCustom.end (); it++) {
 		Multiplier *mult = &it->second;
-		LockHandle (mult->hThread);
+		WaitForSingleObject (mult->hThread, INFINITE);
 			if (!mult->isDestroyed && !mult->saveSession) {
 				mult->isDestroyed = true;
 				_MESSAGE ("Event >> NewGame >> Multiplier destroyed: %s", it->first);
 			}
-		UnlockHandle (it->second.hThread);
+		ReleaseMutex (it->second.hThread);
 	}
 }
 
@@ -217,7 +219,7 @@ extern "C" {
 		obse->RegisterTypedCommand	(&kGetAllPlaylistsCommand, kRetnType_Array);	//24C9
 		obse->RegisterTypedCommand	(&kGetPlaylistCommand, kRetnType_String);		//24CA
 		obse->RegisterTypedCommand	(&kGetPlaylistTracksCommand, kRetnType_Array);	//24CB
-		obse->RegisterTypedCommand	(&kGetTrackNameCommand, kRetnType_String);		//24CC
+		obse->RegisterTypedCommand	(&kGetTrackCommand, kRetnType_String);		//24CC
 		obse->RegisterCommand		(&kGetTrackDurationCommand);					//24CD
 		obse->RegisterCommand		(&kGetTrackPositionCommand);					//24CE
 		obse->RegisterCommand		(&kSetTrackPositionCommand);					//24CF
@@ -243,12 +245,12 @@ extern "C" {
 		obse->RegisterCommand		(&kSetPauseTimeCommand);						//2441
 		obse->RegisterCommand		(&kGetFadeTimeCommand);							//2842
 		obse->RegisterCommand		(&kSetFadeTimeCommand);							//2843
-		obse->RegisterCommand		(&kGetBattleDelayCommand);						//2844
-		obse->RegisterCommand		(&kSetBattleDelayCommand);						//2845
-		obse->RegisterCommand		(&kGetAfterBattleDelayCommand);					//2846
-		obse->RegisterCommand		(&kSetAfterBattleDelayCommand);					//2847
-		obse->RegisterCommand		(&kGetMaxRestoreTimeCommand);					//2848
-		obse->RegisterCommand		(&kSetMaxRestoreTimeCommand);					//2849
+		obse->RegisterCommand		(&kGetStartBattleDelayCommand);					//2844
+		obse->RegisterCommand		(&kSetStartBattleDelayCommand);					//2845
+		obse->RegisterCommand		(&kGetStopBattleDelayCommand);					//2846
+		obse->RegisterCommand		(&kSetStopBattleDelayCommand);					//2847
+		obse->RegisterCommand		(&kGetMusicRememberTimeCommand);				//2848
+		obse->RegisterCommand		(&kSetMusicRememberTimeCommand);				//2849
 		obse->RegisterCommand		(&kPlayTrackCommand);							//244A
 		obse->RegisterCommand		(&kMusicStopCommand);							//284B
 		obse->RegisterCommand		(&kMusicPauseCommand);							//284C
@@ -268,6 +270,8 @@ extern "C" {
 			g_serialization->SetNewGameCallback (g_pluginHandle, EMC2_NewGameCallback);
 
 			//Override game's music system.
+
+
 			//Patch the StreamMusic command.
 			WriteRelCall (0x005096CA, (UInt32)&StreamMusicType);		//"Random"
 			WriteRelCall (0x005096F2, (UInt32)&StreamMusicType);		//"Explore"
@@ -289,7 +293,7 @@ extern "C" {
 			WriteRelJump (0x00660691, (UInt32)&DetectNotBattleMusic_2);
 			WriteRelJump (0x006AC026, 0x006AC056);	// Stop Oblivion from writing current volume levels to INI. The audio menu does it anyway.
 
-			_beginthread (MainThread, 0, nullptr);
+			_beginthread (EMCthread, 0, nullptr);
 		}
 		
 		return true;

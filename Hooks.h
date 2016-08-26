@@ -8,48 +8,53 @@
 
 
 
+//Not needed, as the combat state is extracted directly from the code
+static void *obGetIsInCombat = (void *)0x006605A0;
 
+//Not needed, as the vanilla music player is not used
 static void *obSetMusicVolume = (void *)0x006AA1A0;
 static void *obQueueMusicTrack = (void *)0x006AB160;
 static void *obPlayQueuedMusicTrack = (void *)0x006AB420;
-static void *obGetIsInCombat = (void *)0x006605A0;
 
 
 
 
-int *streamSelectedType = new int (0);
-char *streamSelectedText = new char[200];
+static int *streamSelectedType = new int (0);
+static char *streamSelectedText = new char[200];
 //MusicType of the World (Explore, Public, or Dungeon)
 //MusicTypes worldType = NotKnown;
-MusicType *worldType = music.getWorldTypePtr ();
+static MusicType *worldType = musicState.getWorldTypePtr ();
 
 //MusicType the game should be playing.
 //MusicTypes currentDesiredMusicType = NotKnown;
-MusicType *eventType = music.getEventTypePtr ();
+static MusicType *eventType = musicState.getEventTypePtr ();
 
 //Remember to change this before you change the above.
 //Otherwise sentry thread may execute music twice.
 //specialTypes specialType = Death;
-SpecialMusicType *specialType = music.getSpecialTypePtr ();
+static SpecialMusicType *specialType = musicState.getSpecialTypePtr ();
+
+
+
 
 
 
 _declspec(naked) void QueueMusicTrack (void) {
 	_asm {
-		push eax
+			push eax
 			push ecx
 			push edx
 	}
-	LockHandle (hMusicStateMutex);
+	WaitForSingleObject (hMusicStateMutex, INFINITE);
 	_asm {
-		pop edx
+			pop edx
 			pop ecx
 			pop eax
 			//
 			push ebx
-			mov eax, dword ptr[esp + 08h]		//Get the cell's MusicType...
-			cmp eax, Special					//If EAX != Special
-			jne DoNormal
+			mov eax, dword ptr[esp + 08h]		//Get the MusicType...
+			cmp eax, mtSpecial					//If EAX != Special
+				jne DoNormal
 			//Else, the player may have died.  Go and do a state test.
 			push eax							//MusicType: Special
 			push ecx
@@ -61,20 +66,20 @@ _declspec(naked) void QueueMusicTrack (void) {
 			mov edx, [eax + 198h]					//Get a function of that class...
 			push 01h							//Push a paramter.
 			mov ecx, esi						//Place player data into ECX.
-			call edx							//Call the function.  EAX now contains if the player is in combat.
+				call edx							//Call the function.  EAX now contains if the player is in combat.
 			test al, al							//If EAX (the return value) != 0
 			pop esi
 			pop ecx
 			mov ebx, specialType
-			jnz PlayerDead						//Then jump!
-			mov[ebx], Sp_NotKnown				//Set the special music to NotKnown.
+				jnz PlayerDead						//If not in battle, then it must be dead (success is managed elsewhere). So jump to the dead music!
+			mov[ebx], spNotKnown				//Set the special music to NotKnown.
 			pop eax
-			jmp DoNormal
+				jmp DoNormal
 		PlayerDead :
-		mov[ebx], Death					//Set the special music to Death.
+			mov[ebx], spDeath					//Set the special music to Death.
 			pop eax
 		DoNormal :
-		mov ebx, worldType
+			mov ebx, worldType
 			mov[ebx], eax						//and place it into our little variable.
 			pop ebx
 			//
@@ -82,9 +87,9 @@ _declspec(naked) void QueueMusicTrack (void) {
 			push ecx
 			push edx
 	}
-	UnlockHandle (hMusicStateMutex);
+	ReleaseMutex (hMusicStateMutex);
 	_asm {
-		pop edx
+			pop edx
 			pop ecx
 			pop eax
 			mov eax, 01h						//Return true.
@@ -94,9 +99,10 @@ _declspec(naked) void QueueMusicTrack (void) {
 
 
 
+//Prevent the Oblivion music player from playing the music. The Direct Show player will replace it.
 _declspec(naked) void PlayQueuedMusic (void) {
 	_asm {
-		mov eax, 00h
+			mov eax, 00h
 			retn
 	}
 }
@@ -106,30 +112,30 @@ _declspec(naked) void PlayQueuedMusic (void) {
 //We've entered the title screen.  Let us know.
 _declspec(naked) void DetectTitleMusic (void) {
 	_asm {
-		push eax
+			push eax
 			push ecx
 			push edx
 	}
-	LockHandle (hMusicStateMutex);
+	WaitForSingleObject (hMusicStateMutex, INFINITE);
 	_asm {
-		pop edx
+			pop edx
 			pop ecx
 			pop eax
 			//
 			push ebx
 			mov ebx, specialType
-			mov[ebx], Title					//Set the special music to Title.
+			mov[ebx], spTitle					//Set the special music to Title.
 			mov ebx, eventType
-			mov[ebx], Special					//Set MusicType to Special.
+			mov[ebx], mtSpecial					//Set MusicType to Special.
 			pop ebx
 			//
 			push eax
 			push ecx
 			push edx
 	}
-	UnlockHandle (hMusicStateMutex);
+	ReleaseMutex (hMusicStateMutex);
 	_asm {
-		pop edx
+			pop edx
 			pop ecx
 			pop eax
 			add esp, 108h
@@ -142,28 +148,28 @@ _declspec(naked) void DetectTitleMusic (void) {
 //We've entered the success screen.  Let us know.
 _declspec(naked) void DetectSuccessMusic (void) {
 	_asm {
-		push eax
+			push eax
 			push ecx
 			push edx
 	}
-	LockHandle (hMusicStateMutex);
+	WaitForSingleObject (hMusicStateMutex, INFINITE);
 	_asm {
-		pop edx
+			pop edx
 			pop ecx
 			pop eax
 			push ebx
 			mov ebx, specialType
-			mov[ebx], Success					//Set the special music to Success.
+			mov[ebx], spSuccess					//Set the special music to Success.
 			mov ebx, eventType
-			mov[ebx], Special					//Set MusicType to Special.
+			mov[ebx], mtSpecial					//Set MusicType to Special.
 			pop ebx
 			push eax
 			push ecx
 			push edx
 	}
-	UnlockHandle (hMusicStateMutex);
+	ReleaseMutex (hMusicStateMutex);
 	_asm {
-		pop edx
+			pop edx
 			pop ecx
 			pop eax
 			//
@@ -181,13 +187,13 @@ _declspec(naked) void DetectSuccessMusic (void) {
 
 _declspec(naked) void DetectBattleMusic (void) {
 	_asm {
-		push eax
+			push eax
 			push ecx
 			push edx
 	}
-	LockHandle (hMusicStateMutex);		//Affects EAX, ECX, and EDX
+	WaitForSingleObject (hMusicStateMutex, INFINITE);		//Affects EAX, ECX, and EDX
 	_asm {
-		pop edx
+			pop edx
 			pop ecx
 			pop eax
 			//Check to see if we're using the player's data.
@@ -195,19 +201,19 @@ _declspec(naked) void DetectBattleMusic (void) {
 			mov ebx, 0x00B333C4					//Get the player data.
 			mov ebx, [ebx]						//Player data continued.
 			cmp edi, ebx
-			jne Abort
+				jne Abort
 			//Else, it was the player's data.
 			mov ebx, eventType
-			mov[ebx], Battle					//Set MusicType to Battle.
+			mov[ebx], mtBattle					//Set MusicType to Battle.
 		Abort :
-		pop ebx
+			pop ebx
 			push eax
 			push ecx
 			push edx
 	}
-	UnlockHandle (hMusicStateMutex);
+	ReleaseMutex (hMusicStateMutex);
 	_asm {
-		pop edx
+			pop edx
 			pop ecx
 			pop eax
 			mov al, 01h							//return value = true
@@ -220,13 +226,13 @@ _declspec(naked) void DetectBattleMusic (void) {
 
 _declspec(naked) void DetectNotBattleMusic_1 (void) {
 	_asm {
-		push eax
+			push eax
 			push ecx
 			push edx
 	}
-	LockHandle (hMusicStateMutex);
+	WaitForSingleObject (hMusicStateMutex, INFINITE);
 	_asm {
-		pop edx
+			pop edx
 			pop ecx
 			pop eax
 			//Check to see if we're using the player's data.
@@ -234,19 +240,19 @@ _declspec(naked) void DetectNotBattleMusic_1 (void) {
 			mov ebx, 0x00B333C4					//Get the player data.
 			mov ebx, [ebx]						//Player data continued.
 			cmp edi, ebx
-			jne Abort
+				jne Abort
 			//Else, it was the player's data.
 			mov ebx, eventType
-			mov[ebx], Mt_NotKnown				//Set MusicType to NotKnown.
+			mov[ebx], mtNotKnown				//Set MusicType to NotKnown.
 		Abort :
-		pop ebx
+			pop ebx
 			push eax
 			push ecx
 			push edx
 	}
-	UnlockHandle (hMusicStateMutex);
+	ReleaseMutex (hMusicStateMutex);
 	_asm {
-		pop edx
+			pop edx
 			pop ecx
 			pop eax
 			xor al, al							//Return value = false
@@ -263,9 +269,9 @@ _declspec(naked) void DetectNotBattleMusic_2 (void) {
 			push ecx
 			push edx
 	}
-	LockHandle (hMusicStateMutex);
+	WaitForSingleObject (hMusicStateMutex, INFINITE);
 	_asm {
-		pop edx
+			pop edx
 			pop ecx
 			pop eax
 			//Check to see if we're using the player's data.
@@ -273,27 +279,27 @@ _declspec(naked) void DetectNotBattleMusic_2 (void) {
 			mov ebx, 0x00B333C4					//Get the player data.
 			mov ebx, [ebx]						//Player data continued.
 			cmp edi, ebx
-			jne Abort
+				jne Abort
 			//Else, it was the player's data.
 			mov al, cl							//return value = ...?
 			test al, al							//If AL == 0
-			jz NoBattle							//Then Abort
+				jz NoBattle							//Then Abort
 			//Else, we are in combat.
 			mov ebx, eventType
-			mov[ebx], Battle					//Set MusicType to Battle.
-			jmp Abort
+			mov[ebx], mtBattle					//Set MusicType to Battle.
+				jmp Abort
 		NoBattle :
-		mov ebx, eventType
-			mov[ebx], Mt_NotKnown				//Set MusicType to NotKnown.
+			mov ebx, eventType
+			mov[ebx], mtNotKnown				//Set MusicType to NotKnown.
 		Abort :
-		pop ebx
+			pop ebx
 			push eax
 			push ecx
 			push edx
 	}
-	UnlockHandle (hMusicStateMutex);
+	ReleaseMutex (hMusicStateMutex);
 	_asm {
-		pop edx
+			pop edx
 			pop ecx
 			pop eax
 			mov al, cl							//return value = ...?
@@ -307,9 +313,15 @@ _declspec(naked) void DetectNotBattleMusic_2 (void) {
 
 
 
+
+
+
+
+
+
 _declspec(naked) void StreamMusicType (void) {
 	_asm {
-		push ebp
+			push ebp
 			mov ebp, esp
 			pushad
 			mov eax, [ebp + 8h]
@@ -321,7 +333,7 @@ _declspec(naked) void StreamMusicType (void) {
 	parsePlayTrackCommand (*streamSelectedType);
 
 	_asm {
-		popad
+			popad
 			mov esp, ebp
 			pop ebp
 			retn 00Ch
@@ -338,8 +350,10 @@ _declspec(naked) void StreamMusicFile (void) {
 			mov eax, [ebp + 0Ch]
 			mov streamSelectedText, eax
 	}
+
 	_MESSAGE ("Command >> StreamMusic >> %s", streamSelectedText);
 	parsePlayTrackCommand (streamSelectedText);
+
 	_asm {
 		popad
 			mov esp, ebp

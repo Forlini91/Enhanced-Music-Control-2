@@ -1,5 +1,6 @@
 #pragma once
 
+#include <vector>
 #include <string>
 #include "GameAPI.h"
 
@@ -10,7 +11,7 @@ using namespace std;
 
 
 extern const string currentOblivionPath;
-extern const string supportedExtensions[];
+extern const vector<string> supportedExtensions;
 
 
 
@@ -30,8 +31,8 @@ string trim (const string &str);
 
 bool endsWith (const string &str, const string &ending);
 
-bool endsWithAny (const string &str, const string endings[]);
+bool endsWithAny (const string &str, const vector<string> &endings);
 
 bool endsNotWith (const string &str, const string &ending);
 
-bool endsNotWithAll (const string &str, const string endings[]);
+bool endsNotWithAll (const string &str, const vector<string> &endings);

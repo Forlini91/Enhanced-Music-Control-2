@@ -1,7 +1,6 @@
 #pragma once
 
 #include "INIManager.h"
-#include "MusicPlayer.h"
 
 
 
@@ -87,11 +86,25 @@ public:
 		0.0F);
 
 
+	INISetting kINIPreviousTrackRememberRatio = INISetting (
+		"PreviousTrackRememberRatio",
+		"MusicPlayer",
+		"Remember track if position <= duration*ratio",
+		0.95F);
+
+
 	INISetting kINIPreviousTrackRemember = INISetting (
 		"PreviousTrackRemember",
 		"MusicPlayer",
 		"How many seconds EMC will remember the previous track when changing track?",
 		20.0F);
+
+
+	INISetting kINIPreviousTrackRememberBattle = INISetting (
+		"PreviousTrackRememberBattle",
+		"MusicPlayer",
+		"How many seconds EMC will remember the previous track when in battle?",
+		60.0F);
 
 
 	INISetting kINIFadeOut = INISetting (

@@ -37,6 +37,12 @@ bool operator== (const ActivePlaylist &apl, const Playlist *playlist);
 bool operator== (const Playlist *playlist, const ActivePlaylist &activePlaylist);
 bool operator== (const ActivePlaylist &apl, const Playlist &playlist);
 
+bool operator!= (const ActivePlaylist &apl1, const ActivePlaylist &apl2);
+bool operator!= (const ActivePlaylist &apl, const Playlist *playlist);
+bool operator!= (const ActivePlaylist &apl, const Playlist *playlist);
+bool operator!= (const Playlist *playlist, const ActivePlaylist &activePlaylist);
+bool operator!= (const ActivePlaylist &apl, const Playlist &playlist);
+
 
 
 extern ActivePlaylist apl_Explore;		//The current active Explore playlist
@@ -47,9 +53,9 @@ extern ActivePlaylist apl_Battle;		//The current active Battle playlist
 extern ActivePlaylist apl_Death;		//The current active Death playlist
 extern ActivePlaylist apl_Success;		//The current active Success playlist
 extern ActivePlaylist apl_Title;		//The current active Title playlist
+extern ActivePlaylist apl_NULL;			//A playlist used for null data
 extern ActivePlaylist* activePlaylists[8];		//All current active playlists
-
-
+extern ActivePlaylist* selectedActivePlaylist;
 
 
 

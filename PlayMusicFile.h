@@ -8,10 +8,10 @@ using namespace std;
 
 
 
-extern bool playMusicFile (const char *path);
+bool playMusicFile (const char *path);
 
-extern bool playMusicFile (const string &path);
+bool playMusicFile (const string &path);
 
-extern void parsePlayTrackCommand (const char *path);
+void parsePlayTrackCommand (const char *path);
 
-extern void parsePlayTrackCommand (int playlistCode);
+void parsePlayTrackCommand (int playlistCode);

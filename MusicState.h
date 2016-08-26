@@ -1,7 +1,17 @@
 #pragma once
 
 #include "MusicType.h"
+#include "TimeManagement.h"
 
+
+
+
+enum BattleState {
+	bsNoBattle = 0,		//Not in battle
+	bsStartBattle,		//Battle just started, battle music still not playing
+	bsEndBattle,		//Battle just ended, battle music still playing
+	bsBattle			//In battle
+};
 
 
 class MusicState {
@@ -11,19 +21,23 @@ private:
 	bool overridden = false;
 	bool checkOverride ();
 
-	MusicType worldType = Mt_NotKnown;			//The world's music type.
-	MusicType eventType = Mt_NotKnown;			//The music type set by the player state (dead, combat, ect)
-	SpecialMusicType specialType = Death;		//The special music type playing.
+	MusicType worldType = MusicType::mtNotKnown;			//The world's music type.
+	MusicType eventType = MusicType::mtNotKnown;			//The music type set by the player state (dead, combat, ect)
+	SpecialMusicType specialType = SpecialMusicType::spNotKnown;	//The special music type playing.
 
-	MusicType worldTypeSaved = Mt_NotKnown;		//What was the music type when the level-up menu appeared?
+	MusicType lastWorldType = MusicType::mtNotKnown;	//Last valid world type. Let's keep it, should the level-up return an invalid worldType.
+	MusicType override = MusicType::mtNotKnown;			//What is the music type forced by override?
+	MusicType overridePrev = MusicType::mtNotKnown;		//What was the music type when the override was issued? If there's no lock, this allow us to detect when world music change and disable the override
+
+	BattleState battleState = BattleState::bsNoBattle;
+	bool battleOverridde = false;			//If true, GetCurrentMusicType will not return Battle.
+	bool locked = false;
+
+	SystemTime battleDelay = TIME_ZERO;
+	SystemTime pauseTime = TIME_ZERO;
 
 public:
 
-	MusicType override = Mt_NotKnown;		//What is the music type forced by override?
-	MusicType overridePrev = Mt_NotKnown;	//What was the music type when the override was issued? If there's no lock, this allow us to detect when world music change and disable the override
-	bool battlePlaying = false;
-	bool battleOverridden = false;			//If true, GetCurrentMusicType will not return Battle, unless the override is overridden.
-	bool locked = false;
 
 	//Gets the current world music type, checking and eventually avoiding the post-level-up menu bug.
 	MusicType getWorldType () const;
@@ -31,8 +45,6 @@ public:
 	MusicType* getWorldTypePtr ();
 
 	MusicType setWorldType (MusicType newWorldType);
-
-	MusicType saveWorldType (MusicType saveType);
 
 
 	//Gets the current state music type
@@ -50,13 +62,33 @@ public:
 	SpecialMusicType setSpecialType (SpecialMusicType newSpecialType);
 
 
-	//Gets the current playing music type
-	MusicType getCurrentMusicType (bool ignoreSavedWorld, bool ignoreBattleDelay);
 
-	void overrideMusic (MusicType musicType, bool locked);
+	//Gets the current playing music type
+
+
+	MusicType getCurrentMusicType (bool ignoreBattleDelay);
+
+	//Update the music type, fixing the bug with the Success music and updating the battle delay and pause between tracks.
+	//Return true if the music is paused, false otherwise
+	bool updateMusicState (bool stopped);
+
+	bool isLocked ();
+
+	MusicType getOverrideType ();
+
+	void overrideType (MusicType musicType, bool locked);
+
+	bool isBattleOverridden ();
+
+	bool setBattleOverride (bool battleOverride);
+
+
+	bool isInBattle ();
+
+	bool isBattleMusicPlaying ();
 
 };
 
 
-extern MusicState music;
+extern MusicState musicState;
 extern HANDLE hMusicStateMutex;			//Lock when using the object "music".

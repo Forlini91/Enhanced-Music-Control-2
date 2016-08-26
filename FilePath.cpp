@@ -8,7 +8,7 @@
 
 
 const string currentOblivionPath = GetOblivionDirectory ();
-const string supportedExtensions[] = { ".mp3", ".wav", ".wma" };
+const vector<string> supportedExtensions = {".mp3", ".wav", ".wma"};
 
 
 bool exists (const string &path) {
@@ -77,9 +77,9 @@ bool endsWith (const string &str, const string &ending) {
 
 
 
-bool endsWithAny (const string &str, const string endings[]) {
-	for (int i = 0, n = arraySize (endings, string); i < n; i++) {
-		if (endsWith (str, endings[i])) {
+bool endsWithAny (const string &str, const vector<string> &endings) {
+	for (const string &ending : endings) {
+		if (endsWith (str, ending)) {
 			return true;
 		}
 	}
@@ -100,9 +100,9 @@ bool endsNotWith (const string &str, const string &ending) {
 
 
 
-bool endsNotWithAll (const string &str, const string endings[]) {
-	for (int i = 0, n = arraySize (endings, string); i < n; i++) {
-		if (!endsNotWith (str, endings[i])) {
+bool endsNotWithAll (const string &str, const vector<string> &endings) {
+	for (const string &ending : endings){
+		if (endsWith (str, ending)) {
 			return false;
 		}
 	}

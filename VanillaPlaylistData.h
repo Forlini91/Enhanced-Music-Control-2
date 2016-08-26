@@ -14,6 +14,7 @@ static const char *obTitle = "obTitle";
 static const char *obExplorePath = "Data\\Music\\Explore\\*";
 static const char *obPublicPath = "Data\\Music\\Public\\*";
 static const char *obDungeonPath = "Data\\Music\\Dungeon\\*";
+static const char *obCustomPath = "Data\\Music\\Custom\\*";
 static const char *obBattlePath = "Data\\Music\\Battle\\*";
 static const char *obDeathPathExt = "Data\\Music\\Special\\death.mp3|Data\\Music\\Special\\death_*";
 static const char *obSuccessPathExt = "Data\\Music\\Special\\success.mp3|Data\\Music\\Special\\success_*";

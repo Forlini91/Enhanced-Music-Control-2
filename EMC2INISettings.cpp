@@ -4,6 +4,8 @@
 #include "IniData.h"
 #include "Multiplier.h"
 #include "Playlist.h"
+#include "MusicPlayer.h"
+#include "MusicTimes.h"
 
 
 EMC2INISettings iniSettings;
@@ -36,6 +38,7 @@ void EMC2INISettings::Initialize (const char *INIPath, void *Parameter) {
 	RegisterSetting (&kINIBattleMusicEndDelayMin);
 	RegisterSetting (&kINIBattleMusicEndDelayExtra);
 	RegisterSetting (&kINIPreviousTrackRemember);
+	RegisterSetting (&kINIPreviousTrackRememberBattle);
 	RegisterSetting (&kINIFadeOut);
 	RegisterSetting (&kINIFadeIn);
 	RegisterSetting (&kINIFadeInBattle);
@@ -45,7 +48,7 @@ void EMC2INISettings::Initialize (const char *INIPath, void *Parameter) {
 	if (CreateINI)
 		Save ();
 
-	PopulateFromSection ("GenericSection");
+	PopulateFromSection ("General");
 }
 
 
@@ -54,7 +57,6 @@ void EMC2INISettings::applySettings () {
 	_MESSAGE ("Initialization >> EMC2 ini data");
 	float val;
 
-	_MESSAGE ("Initialization >> Read General settings");
 	//General
 	delayTitleMusicEnd = (kINIDelayTitleMusicEnd.GetData ().i > 0);
 
@@ -67,63 +69,61 @@ void EMC2INISettings::applySettings () {
 	playlists.reserve (numPlaylists + 1);
 
 
-	_MESSAGE ("Initialization >> Music Player settings");
 	//MusicPlayer
 	val = kINIMusicSpeed.GetData ().f;
-	val = clamp (val, 0, 100);
-	musicPlayer.setMusicSpeed (false, (double)val);
+	val = clamp (val, 0, 10);		//Up to 10x speed
+	musicPlayer.setMusicSpeed (static_cast<double>(val));
 
-	_MESSAGE ("Initialization >> Music Player settings 2");
 	val = kINITrackPauseMin.GetData ().f;
-	val = clamp (val, 0, 100000);
-	musicPlayer.setMinPauseTime (false, val * 1000);
+	val = clamp (val, 0, 3600);		//Up to one hour
+	musicTimes.setMinPauseTime (val * 1000);
 
 	val = kINITrackPauseExtra.GetData ().f;
-	val = clamp (val, 0, 100000);
-	musicPlayer.setExtraPauseTime (false, val * 1000);
-	musicPlayer.recalculatePauseTime (false);
+	val = clamp (val, 0, 3600);		//Up to one hour
+	musicTimes.setExtraPauseTime (val * 1000);
 
-	_MESSAGE ("Initialization >> Music Player settings 3");
 	val = kINIBattleMusicStartDelayMin.GetData ().f;
-	val = clamp (val, 0, 100000);
-	musicPlayer.setMinBattleDelay (false, val * 1000);
+	val = clamp (val, 0, 300);		//Up to 5 minutes delay.
+	musicTimes.setMinStartBattleDelay (val * 1000);
 
 	val = kINIBattleMusicStartDelayExtra.GetData ().f;
-	val = clamp (val, 0, 100000);
-	musicPlayer.setExtraBattleDelay (false, val * 1000);
-	musicPlayer.recalculateBattleDelay (false);
+	val = clamp (val, 0, 300);		//Up to 5 minutes delay
+	musicTimes.setExtraStartBattleDelay (val * 1000);
 
-	_MESSAGE ("Initialization >> Music Player settings 4");
 	val = kINIBattleMusicEndDelayMin.GetData ().f;
-	val = clamp (val, 0, 100000);
-	musicPlayer.setMinAfterBattleDelay (false, val * 1000);
+	val = clamp (val, 0, 300);		//Up to 5 minutes delay
+	musicTimes.setMinStopBattleDelay (val * 1000);
 
 	val = kINIBattleMusicEndDelayExtra.GetData ().f;
-	val = clamp (val, 0, 100000);
-	musicPlayer.setExtraAfterBattleDelay (false, val * 1000);
+	val = clamp (val, 0, 300);		//Up to 5 minutes delay
+	musicTimes.setExtraStopBattleDelay (val * 1000);
 
-	_MESSAGE ("Initialization >> Music Player settings 5");
-	val = kINIBattleMusicEndDelayExtra.GetData ().f;
-	val = clamp (val, 0, 100000);
-	musicPlayer.setExtraAfterBattleDelay (false, val * 1000);
-	musicPlayer.recalculateAfterBattleDelay (false);
+	val = kINIPreviousTrackRememberRatio.GetData ().f;
+	previousTrackRememberRatio = clamp (val, 0, 1);			//From 0 to 100% of track duration
 
-	_MESSAGE ("Initialization >> Music Player settings 6");
 	val = kINIPreviousTrackRemember.GetData ().f;
-	val = clamp (val, 0, 100000);
-	musicPlayer.setMaxRestoreTime (false, val * 1000);
+	val = clamp (val, 0, 600);		//Up to 10 minutes
+	musicTimes.setMusicRememberTime (val * 1000);
+
+	val = kINIPreviousTrackRememberBattle.GetData ().f;
+	val = clamp (val, 0, 600);		//Up to 10 minutes
+	musicTimes.setBattleMusicRememberTime (val * 1000);
+
+
+	musicTimes.recalculatePauseTime ();
+	musicTimes.recalculateStartBattleDelay ();
+	musicTimes.recalculateStopBattleDelay ();
 	
 	
 
-	_MESSAGE ("Initialization >> Read Fade settings");
 	//Fade
 	val = kINIFadeOut.GetData ().f;
 	val = clamp (val, 0, 100000);
-	musicPlayer.setCurrentFadeOutLength (false, val * 1000);
+	musicTimes.setFadeOut (val * 1000);
 
 	val = kINIFadeIn.GetData ().f;
 	val = clamp (val, 0, 100000);
-	musicPlayer.setCurrentFadeInLength (false, val * 1000);
+	musicTimes.setFadeIn (val * 1000);
 
 	val = kINIFadeOutBattle.GetData ().f;
 	fadeInBattle = clamp (val, 0, 100000) * 1000;
@@ -132,7 +132,6 @@ void EMC2INISettings::applySettings () {
 	fadeOutBattle = clamp (val, 0, 100000) * 1000;
 
 
-	_MESSAGE ("Initialization >> Read Notification settings");
 	//Notification
 	printNewTrack = (kINIPrintTrack.GetData ().i > 0);
 

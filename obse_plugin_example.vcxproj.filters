@@ -19,6 +19,9 @@
     <Filter Include="GlobalStructsEnum">
       <UniqueIdentifier>{fc2fddbd-3a59-4760-8ee8-ff6a49b0476f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="utils">
+      <UniqueIdentifier>{2c1cddb7-b262-4a5e-a6d9-4824e1aa69c1}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\obse\obse\GameAPI.cpp">
@@ -79,11 +82,7 @@
     </ClCompile>
     <ClCompile Include="Commands.cpp" />
     <ClCompile Include="Playlist.cpp" />
-    <ClCompile Include="MainThread.cpp">
-      <Filter>Threads</Filter>
-    </ClCompile>
     <ClCompile Include="Multiplier.cpp" />
-    <ClCompile Include="FilePath.cpp" />
     <ClCompile Include="ThreadRequest.cpp">
       <Filter>Threads</Filter>
     </ClCompile>
@@ -112,6 +111,24 @@
     <ClCompile Include="OBSEInterfaces.cpp" />
     <ClCompile Include="MusicType.cpp">
       <Filter>GlobalStructsEnum</Filter>
+    </ClCompile>
+    <ClCompile Include="MusicTimes.cpp">
+      <Filter>MusicPlayer</Filter>
+    </ClCompile>
+    <ClCompile Include="EMCthread.cpp">
+      <Filter>Threads</Filter>
+    </ClCompile>
+    <ClCompile Include="MusicInstance.cpp">
+      <Filter>Threads</Filter>
+    </ClCompile>
+    <ClCompile Include="PendingPlaylist.cpp">
+      <Filter>Threads</Filter>
+    </ClCompile>
+    <ClCompile Include="FilePath.cpp">
+      <Filter>utils</Filter>
+    </ClCompile>
+    <ClCompile Include="TimeManagement.cpp">
+      <Filter>utils</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -177,9 +194,6 @@
     </ClInclude>
     <ClInclude Include="Hooks.h" />
     <ClInclude Include="Commands.h" />
-    <ClInclude Include="MainThread.h">
-      <Filter>Threads</Filter>
-    </ClInclude>
     <ClInclude Include="ThreadRequest.h">
       <Filter>Threads</Filter>
     </ClInclude>
@@ -209,7 +223,6 @@
       <Filter>INI</Filter>
     </ClInclude>
     <ClInclude Include="Multiplier.h" />
-    <ClInclude Include="FilePath.h" />
     <ClInclude Include="VanillaPlaylistData.h">
       <Filter>GlobalStructsEnum</Filter>
     </ClInclude>
@@ -229,6 +242,24 @@
     <ClInclude Include="OBSEInterfaces.h" />
     <ClInclude Include="Globals.h">
       <Filter>GlobalStructsEnum</Filter>
+    </ClInclude>
+    <ClInclude Include="MusicTimes.h">
+      <Filter>MusicPlayer</Filter>
+    </ClInclude>
+    <ClInclude Include="EMCthread.h">
+      <Filter>Threads</Filter>
+    </ClInclude>
+    <ClInclude Include="MusicInstance.h">
+      <Filter>Threads</Filter>
+    </ClInclude>
+    <ClInclude Include="PendingPlaylist.h">
+      <Filter>Threads</Filter>
+    </ClInclude>
+    <ClInclude Include="FilePath.h">
+      <Filter>utils</Filter>
+    </ClInclude>
+    <ClInclude Include="TimeManagement.h">
+      <Filter>utils</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
