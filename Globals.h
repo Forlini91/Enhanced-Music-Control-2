@@ -9,7 +9,7 @@ extern IDebugLog gLog;
 
 
 
-#define EMCDEBUG 0
+#define EMCDEBUG 1
 
 #define isBetween(val,minV,maxV) (minV <= val && val <= maxV)
 
@@ -28,7 +28,7 @@ extern IDebugLog gLog;
 
 #ifdef _DEBUG
 	#define _EMCDEBUG(...) _MESSAGE(__VA_ARGS__)
-#elif EMCDEBUG > 0
+#elif EMCDEBUG
 	#define _EMCDEBUG(...) _MESSAGE(__VA_ARGS__)
 #else
 	#define _EMCDEBUG(...)
