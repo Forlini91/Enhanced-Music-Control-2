@@ -109,9 +109,6 @@
     <ClCompile Include="MusicTimes.cpp">
       <Filter>MusicPlayer</Filter>
     </ClCompile>
-    <ClCompile Include="EMCthread.cpp">
-      <Filter>Threads</Filter>
-    </ClCompile>
     <ClCompile Include="MusicInstance.cpp">
       <Filter>Threads</Filter>
     </ClCompile>
@@ -120,6 +117,9 @@
     </ClCompile>
     <ClCompile Include="FilePath.cpp">
       <Filter>utils</Filter>
+    </ClCompile>
+    <ClCompile Include="EMCthread.cpp">
+      <Filter>Threads</Filter>
     </ClCompile>
     <ClCompile Include="TimeManagement.cpp">
       <Filter>utils</Filter>
@@ -237,6 +237,12 @@
     <ClInclude Include="MusicTimes.h">
       <Filter>MusicPlayer</Filter>
     </ClInclude>
+    <ClInclude Include="FilePath.h">
+      <Filter>utils</Filter>
+    </ClInclude>
+    <ClInclude Include="DebugMode.h">
+      <Filter>utils</Filter>
+    </ClInclude>
     <ClInclude Include="EMCthread.h">
       <Filter>Threads</Filter>
     </ClInclude>
@@ -246,13 +252,7 @@
     <ClInclude Include="PendingPlaylist.h">
       <Filter>Threads</Filter>
     </ClInclude>
-    <ClInclude Include="FilePath.h">
-      <Filter>utils</Filter>
-    </ClInclude>
     <ClInclude Include="TimeManagement.h">
-      <Filter>utils</Filter>
-    </ClInclude>
-    <ClInclude Include="DebugMode.h">
       <Filter>utils</Filter>
     </ClInclude>
   </ItemGroup>

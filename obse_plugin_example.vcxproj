@@ -143,7 +143,6 @@ copy "$(TargetPath)" "C:\Bethesda Softworks\Nehrim\Data\OBSE\Plugins\$(TargetFil
     <ClCompile Include="OBSEInterfaces.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MainGameVarsPointer.cpp" />
-    <ClCompile Include="EMCthread.cpp" />
     <ClCompile Include="Multiplier.cpp" />
     <ClCompile Include="MusicPlayer.cpp" />
     <ClCompile Include="PendingPlaylist.cpp" />
@@ -152,6 +151,7 @@ copy "$(TargetPath)" "C:\Bethesda Softworks\Nehrim\Data\OBSE\Plugins\$(TargetFil
     <ClCompile Include="PlayMusicFile.cpp" />
     <ClCompile Include="SafeWrite\SafeWrite.cpp" />
     <ClCompile Include="FilePath.cpp" />
+    <ClCompile Include="EMCthread.cpp" />
     <ClCompile Include="ThreadRequest.cpp" />
     <ClCompile Include="TimeManagement.cpp" />
   </ItemGroup>
@@ -177,6 +177,7 @@ copy "$(TargetPath)" "C:\Bethesda Softworks\Nehrim\Data\OBSE\Plugins\$(TargetFil
     <ClInclude Include="Commands.h" />
     <ClInclude Include="DebugMode.h" />
     <ClInclude Include="EMC2INISettings.h" />
+    <ClInclude Include="EMCthread.h" />
     <ClInclude Include="FadeThread.h" />
     <ClInclude Include="FilePath.h" />
     <ClInclude Include="Globals.h" />
@@ -186,7 +187,6 @@ copy "$(TargetPath)" "C:\Bethesda Softworks\Nehrim\Data\OBSE\Plugins\$(TargetFil
     <ClInclude Include="INIManager.h" />
     <ClInclude Include="MainGameVarsPointer.h" />
     <ClInclude Include="MainGameVarsStruct.h" />
-    <ClInclude Include="EMCthread.h" />
     <ClInclude Include="Multiplier.h" />
     <ClInclude Include="MusicInstance.h" />
     <ClInclude Include="MusicTimes.h" />
