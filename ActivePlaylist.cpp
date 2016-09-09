@@ -179,7 +179,7 @@ ActivePlaylist* getActivePlaylist (MusicType musicType) {
 		case MusicType::mtDungeon: return &apl_Dungeon;
 		case MusicType::mtCustom: return &apl_Custom;
 		case MusicType::mtBattle: return &apl_Battle;
-		default: return nullptr;
+		default: return &apl_NULL;
 	}
 }
 
@@ -190,7 +190,7 @@ ActivePlaylist* getActivePlaylist (SpecialMusicType specialMusicType) {
 		case SpecialMusicType::spDeath: return &apl_Death;
 		case SpecialMusicType::spSuccess: return &apl_Success;
 		case SpecialMusicType::spTitle: return &apl_Title;
-		default: return nullptr;
+		default: return &apl_NULL;
 	}
 }
 
@@ -199,5 +199,5 @@ ActivePlaylist* getActivePlaylist (SpecialMusicType specialMusicType) {
 bool samePlaylist (MusicType musicType1, MusicType musicType2) {
 	ActivePlaylist* apl1 = getActivePlaylist (musicType1);
 	ActivePlaylist* apl2 = getActivePlaylist (musicType2);
-	return apl1 != nullptr && apl2 != nullptr && apl1->playlist == apl2->playlist;
+	return apl1 != &apl_NULL && apl2 != &apl_NULL && apl1->playlist == apl2->playlist;
 }

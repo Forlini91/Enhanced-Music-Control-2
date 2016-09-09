@@ -3,7 +3,7 @@
 extern bool delayTitleMusicEnd;
 extern int numMultipliers;
 extern int numPlaylists;
-extern __int64 fadeInBattle;
-extern __int64 fadeOutBattle;
+extern long long fadeInBattle;
+extern long long fadeOutBattle;
 extern float previousTrackRememberRatio;
 extern bool printNewTrack;

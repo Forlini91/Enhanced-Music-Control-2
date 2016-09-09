@@ -5,9 +5,6 @@
 
 
 
-//1 Second
-#define ONE_SECOND 10000000.0
-
 //This is the very lowest volume that can be used in DShow.
 //Setting the volume to this effectively mutes the playing track.
 #define ABSOLUTE_MINIMUM_VOLUME -10000

@@ -7,7 +7,7 @@
 #include "FadeThread.h"
 
 
-
+bool recalculateMultipliers = true;
 Multiplier multObMaster;
 Multiplier multObMasterIni;
 Multiplier multObMusic;
@@ -39,7 +39,11 @@ volatile float Multiplier::getValue () {
 
 
 void Multiplier::setValue (float newValue) {
-	*value = clamp(newValue, 0, 1);
+	newValue = clamp(newValue, 0, 1);
+	if (*value != newValue) {
+		*value = newValue;
+		recalculateMultipliers = true;
+	}
 }
 
 
@@ -47,10 +51,10 @@ void Multiplier::setValue (float newValue) {
 bool Multiplier::setValueLimit (float newValue, float limit) {
 	if (isBetweenLimits(*value,limit,newValue,<=)) {
 		//If limit is beween *value and newValue, then we need to cross it (but we don't want to cross it, so...).
-		*value = limit;
+		setValue(limit);
 		return true;
 	} else {
-		*value = newValue;
+		setValue(newValue);
 		return false;
 	}
 }
@@ -88,7 +92,12 @@ FadeThreadState Multiplier::fadeVolume (float newTargetValue, float newFadeTime)
 }
 
 
+void Multiplier::destroy () {
+	recalculateMultipliers = true;
+	isDestroyed = true;
+}
 
-volatile float Multiplier::operator<<(volatile float *var) {
-	return *(value = var);
+
+float Multiplier::operator=(float value) {
+	setValue (value);
 }

@@ -4,6 +4,8 @@
 #include <algorithm>
 #include "GameAPI.h"
 #include "FilePath.h"
+#include "TimeManagement.h"
+#include "DebugMode.h"
 
 #define notDirectory(x) ((x.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != FILE_ATTRIBUTE_DIRECTORY)
 
@@ -33,11 +35,11 @@ Playlist::Playlist (const char *name, bool vanillaPlaylist) : name (name), vanil
 
 Playlist::Playlist (const char *name, const string &paths, bool randomOrder, bool vanillaPlaylist) : name (name), randomOrder (randomOrder), vanillaPlaylist (vanillaPlaylist) {
 	if (setPaths (paths, randomOrder)) {
-		_MESSAGE ("Playlist: \"%s\" > Created succesfully", name);
+		_MESSAGE ("%lld | Playlist: \"%s\" > Created succesfully", timeStamp, name);
 	} else if (vanillaPlaylist) {
-		_MESSAGE ("Playlist: \"%s\" > Vanilla playlist without tracks", name);
+		_MESSAGE ("%lld | Playlist: \"%s\" > Vanilla playlist without tracks", timeStamp, name);
 	} else {
-		_WARNING ("Playlist: \"%s\" > Not succesfully created", name);
+		_WARNING ("%lld | Playlist: \"%s\" > Not succesfully created", timeStamp, name);
 		throw exception ();
 	}
 }
@@ -64,15 +66,15 @@ void Playlist::destroy () {
 bool Playlist::setPaths (const string &paths, bool randomOrder) {
 	Playlist backup = Playlist (this);
 	if (buildPaths (paths)) {
-		_MESSAGE ("Playlist: \"%s\" > New paths: \"%s\"", name, paths.c_str ());
+		_MESSAGE ("%lld | Playlist: \"%s\" > New paths: \"%s\"", timeStamp, name, paths.c_str ());
 		initialized = true;
 		destroyed = false;
-		Playlist::randomOrder = randomOrder && tracks.size () >= 2;
+		Playlist::randomOrder = randomOrder;
 		sortTracks (true);
 		curIndex = -1;
 		return true;
 	} else {
-		_MESSAGE ("Playlist: \"%s\" > const string &is not valid or empty: \"%s\"", name, paths.c_str ());
+		_MESSAGE ("%lld | Playlist: \"%s\" > Path is not valid or empty: \"%s\"", timeStamp, name, paths.c_str ());
 		backup.moveTo (this);
 		initialized = false;
 		return false;
@@ -83,16 +85,15 @@ bool Playlist::setPaths (const string &paths, bool randomOrder) {
 
 bool Playlist::addPath (const string &path) {
 	Playlist backup = Playlist(this);
-	_MESSAGE ("Playlist: \"%s\" > Add path: \"%s\"", name, path.c_str ());
 	if (buildPath (path, true)) {
-		_MESSAGE ("Playlist: \"%s\" > Added path: \"%s\"", name, path.c_str ());
+		_MESSAGE ("%lld | Playlist: \"%s\" > Added path: \"%s\"", timeStamp, name, path.c_str ());
 		initialized = true;
 		destroyed = false;
 		sortTracks (true);
 		curIndex = -1;
 		return true;
 	} else {
-		_MESSAGE ("Playlist: \"%s\" > const string &is not valid or empty: \"%s\"", name, path.c_str ());
+		_MESSAGE ("%lld | Playlist: \"%s\" > const string &is not valid or empty: \"%s\"", timeStamp, name, path.c_str ());
 		backup.moveTo (this);
 		return false;
 	}
@@ -130,12 +131,11 @@ const string& Playlist::getCurrentTrack () const {
 
 const string& Playlist::getNextTrack () {
 	if (initialized) {
-		curIndex++;
-		if (curIndex >= tracks.size ()) {
+		if (++curIndex >= tracks.size ()) {
 			sortTracks (false);	//Reorder the list.
-			curIndex = -1;
+			curIndex = 0;
 		}
-		_MESSAGE ("const string &n° %d/%d", curIndex, tracks.size ());
+		_MESSAGE ("%lld | Playlist: \"%s\" > Track n° %d/%d > %s", timeStamp, name, curIndex, tracks.size (), tracks.at (curIndex));
 		return tracks.at (curIndex);
 	}
 	return emptyStr;
@@ -236,10 +236,12 @@ vector<string> Playlist::tokenizePaths (const string &paths) const {
 
 void Playlist::sortTracks (bool updated) {
 	if (randomOrder){
-		if (tracks.size () > 2) {
+		if (tracks.size () > 1) {
+			_EMCDEBUG2 ("%lld | Playlist: \"%s\" > Shuffle", timeStamp, name);
 			random_shuffle (tracks.begin (), tracks.end ());
 		}
 	} else if (updated) {
+		_EMCDEBUG2 ("%lld | Playlist: \"%s\" > Sort", timeStamp, name);
 		sort (tracks.begin (), tracks.end ());
 	}
 }
@@ -294,7 +296,7 @@ bool Playlist::buildPath (const string &path, bool add) {
 			if (fileName == ".." || !notDirectory (FindFileData)) {
 				continue;
 			} else if (!isExtensionSupported(fileName)) {
-				_MESSAGE ("File %s has unsupported extension", fileName.c_str());
+				_EMCDEBUG2 ("%lld | File %s has unsupported extension", timeStamp, fileName.c_str ());
 				continue;
 			}
 			

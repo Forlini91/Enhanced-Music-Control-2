@@ -37,7 +37,7 @@ bool Cmd_GetMusicType_Execute (COMMAND_ARGS) {
 
 	WaitForSingleObject (hMusicStateMutex, INFINITE);
 		switch (mode) {
-			case 0: *result = musicState.getCurrentMusicType (false); break;
+			case 0: *result = musicState.getCurrentMusicType (); break;
 			case 1: *result = musicState.getWorldType (); break;
 			case 2: *result = musicState.getOverrideType (); break;
 			case 3: *result = musicState.getSpecialType (); break;
@@ -285,7 +285,7 @@ bool Cmd_SetPlaylist_Execute (COMMAND_ARGS) {
 	*result = 0;
 
 	WaitForSingleObject (hMusicPlayerMutex, INFINITE);
-	bool isReady = musicPlayer.isReady ();
+		bool isReady = musicPlayer.isReady ();
 	ReleaseMutex (hMusicPlayerMutex);
 	if (!isReady) {
 		return true;
@@ -361,7 +361,7 @@ bool Cmd_RestorePlaylist_Execute (COMMAND_ARGS) {
 	}
 
 	WaitForSingleObject (hMusicStateMutex, INFINITE);
-		MusicType currentMusicType = musicState.getCurrentMusicType (false);
+		MusicType currentMusicType = musicState.getCurrentMusicType ();
 	ReleaseMutex (hMusicStateMutex);
 	if (pMusicType < 0) {		//Restore all.
 		bool restored = false;
@@ -469,7 +469,7 @@ bool Cmd_GetPlaylist_Execute (COMMAND_ARGS) {
 		activePlaylist = getActivePlaylist (static_cast<MusicType>(pMusicType));
 	}
 
-	if (activePlaylist != nullptr) {
+	if (activePlaylist != &apl_NULL) {
 		const char* playlistName = activePlaylist->playlist->name;
 		g_stringIntfc->Assign (PASS_COMMAND_ARGS, playlistName);
 		Console_PrintC ("Playlist >> %s", playlistName);
@@ -781,7 +781,7 @@ bool Cmd_SetMusicVolume_Execute (COMMAND_ARGS) {
 			} else if (fadeTime <= 0) {
 				mult = &pos->second;
 				WaitForSingleObject (mult->hThread, INFINITE);
-					mult->isDestroyed = true;
+					mult->destroy ();
 				ReleaseMutex (mult->hThread);
 				Console_PrintC ("Set music volume >> Multiplier destroyed");
 				_MESSAGE ("Command >> emcSetMusicVolume >> Multiplier destroyed");

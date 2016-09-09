@@ -34,6 +34,7 @@
 //OBSE includes
 #include "PluginAPI.h"
 #include "GameAPI.h"
+#include "CommandTable.h"
 
 //Project includes
 #include "Globals.h"
@@ -45,8 +46,8 @@
 #include "Commands.h"
 #include "EMCthread.h"
 #include "OBSEInterfaces.h"
+#include "TimeManagement.h"
 
-#include "CommandTable.h"
 
 
 using namespace std;
@@ -60,7 +61,7 @@ IDebugLog gLog("enhanced_music_control_2.log");
 //EMCT - World MusicType playing at time of save.
 //EMCV - The Relative Volume.
 static void EMC2_SaveCallback(void *reserved) {
-	_MESSAGE("Event >> SaveGame");
+	_MESSAGE("%lld | Event >> SaveGame", timeStamp);
 	WaitForSingleObject (hMusicStateMutex, INFINITE);
 		MusicType worldType = musicState.getWorldType();
 	ReleaseMutex (hMusicStateMutex);
@@ -75,7 +76,7 @@ static void EMC2_SaveCallback(void *reserved) {
 static void EMC2_LoadCallback(void *reserved) {
 	UInt32	type, version, length;
 
-	_MESSAGE("Event >> LoadGame");
+	_MESSAGE ("%lld | Event >> LoadGame", timeStamp);
 	char	buf[512];
 	while (g_serialization->GetNextRecordInfo(&type, &version, &length))
 	{
@@ -90,7 +91,7 @@ static void EMC2_LoadCallback(void *reserved) {
 				musicState.setWorldType (static_cast<MusicType>(atoi (buf)));
 				musicState.setEventType (MusicType::mtNotKnown);
 			ReleaseMutex (hMusicStateMutex);
-			_MESSAGE("Event >> LoadGame >> World music: %s", buf);
+			_MESSAGE ("%lld | Event >> LoadGame >> World music: %s", timeStamp, buf);
 			break;
 		}
 	}
@@ -100,17 +101,18 @@ static void EMC2_LoadCallback(void *reserved) {
 		WaitForSingleObject (mult.hThread, INFINITE);
 			if (!mult.isDestroyed && !mult.saveSession) {
 				mult.isDestroyed = true;
-				_MESSAGE ("Event >> LoadGame >> Multiplier destroyed: %s", it->first);
+				_MESSAGE ("%lld | Event >> LoadGame >> Multiplier destroyed: %s", timeStamp, it->first);
 			}
 		ReleaseMutex (mult.hThread);
 	}
-
+	recalculateMultipliers = true;
+	musicState.reloadBattleState ();
 }
 
 
 
 static void EMC2_NewGameCallback(void *reserved) {
-	_MESSAGE("Event >> NewGame");
+	_MESSAGE ("%lld | Event >> NewGame", timeStamp);
 	WaitForSingleObject (hMusicStateMutex, INFINITE);
 		musicState.setWorldType (MusicType::mtDungeon);			//Should be fine for your vanilla Oblivion.
 		musicState.setEventType (MusicType::mtNotKnown);
@@ -121,10 +123,12 @@ static void EMC2_NewGameCallback(void *reserved) {
 		WaitForSingleObject (mult->hThread, INFINITE);
 			if (!mult->isDestroyed && !mult->saveSession) {
 				mult->isDestroyed = true;
-				_MESSAGE ("Event >> NewGame >> Multiplier destroyed: %s", it->first);
+				_MESSAGE ("%lld | Event >> NewGame >> Multiplier destroyed: %s", timeStamp, it->first);
 			}
 		ReleaseMutex (it->second.hThread);
 	}
+	recalculateMultipliers = true;
+	musicState.reloadBattleState ();
 }
 
 
@@ -270,7 +274,9 @@ extern "C" {
 			g_serialization->SetNewGameCallback (g_pluginHandle, EMC2_NewGameCallback);
 
 			//Override game's music system.
-
+			/*UInt32 opCode = g_scriptCommands.GetByName ("StreamMusic")->opcode;
+			CommandInfo newStreamMusic = kPlayTrackCommand;
+			g_scriptCommands.Replace (opCode, &newStreamMusic);*/
 
 			//Patch the StreamMusic command.
 			WriteRelCall (0x005096CA, (UInt32)&StreamMusicType);		//"Random"

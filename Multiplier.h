@@ -9,6 +9,8 @@
 using namespace std;
 
 
+extern bool recalculateMultipliers;
+
 
 enum FadeThreadState {
 	ft_NotRunning,
@@ -51,7 +53,9 @@ public:
 
 	FadeThreadState fadeVolume (float targetValue, float fadeTime);
 
-	volatile float operator<< (volatile float *var);
+	void destroy ();
+
+	float operator=(float value);
 };
 
 

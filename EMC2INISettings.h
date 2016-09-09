@@ -125,14 +125,14 @@ public:
 		"FadeInBattle",
 		"Fade",
 		"Fade in when battle music start",
-		500.0F);
+		0.5F);
 
 
 	INISetting kINIFadeOutBattle = INISetting (
 		"FadeOutBattle",
 		"Fade",
 		"Fade in when battle music ends",
-		1000.0F);
+		1.0F);
 
 
 	INISetting kINIPrintTrack = INISetting (

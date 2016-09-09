@@ -21,6 +21,8 @@ static void *obPlayQueuedMusicTrack = (void *)0x006AB420;
 
 static int *streamSelectedType = new int (0);
 static char *streamSelectedText = new char[200];
+
+static int *wt = &musicState.wrlType;
 //MusicType of the World (Explore, Public, or Dungeon)
 //MusicTypes worldType = NotKnown;
 static MusicType *worldType = musicState.getWorldTypePtr ();
@@ -80,6 +82,8 @@ _declspec(naked) void QueueMusicTrack (void) {
 			pop eax
 		DoNormal :
 			mov ebx, worldType
+			mov[ebx], eax						//and place it into our little variable.
+			mov ebx, wt
 			mov[ebx], eax						//and place it into our little variable.
 			pop ebx
 			//

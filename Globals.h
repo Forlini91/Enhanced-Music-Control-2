@@ -3,13 +3,11 @@
 
 extern IDebugLog gLog;
 
-#define WaitForSingleObject WaitForSingleObject		//These only exist for coloration purpose!
-#define WaitForMultipleObjects WaitForMultipleObjects
-#define ReleaseMutex ReleaseMutex
+#define WaitForSingleObject WaitForSingleObject			//This only exist for syntax coloration purpose!
+#define WaitForMultipleObjects WaitForMultipleObjects	//This only exist for syntax coloration purpose!
+#define ReleaseMutex ReleaseMutex						//This only exist for syntax coloration purpose!
 
 
-
-#define EMCDEBUG 1
 
 #define isBetween(val,minV,maxV) (minV <= val && val <= maxV)
 
@@ -24,15 +22,6 @@ extern IDebugLog gLog;
 #define getEmplaced(x) x.first->second
 
 
-
-
-#ifdef _DEBUG
-	#define _EMCDEBUG(...) _MESSAGE(__VA_ARGS__)
-#elif EMCDEBUG
-	#define _EMCDEBUG(...) _MESSAGE(__VA_ARGS__)
-#else
-	#define _EMCDEBUG(...)
-#endif
 
 //Quick code
 

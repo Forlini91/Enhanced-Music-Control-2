@@ -3,7 +3,7 @@
 bool delayTitleMusicEnd;
 int numMultipliers;
 int numPlaylists;
-__int64 fadeInBattle;
-__int64 fadeOutBattle;
+long long fadeInBattle;
+long long fadeOutBattle;
 float previousTrackRememberRatio;
 bool printNewTrack;

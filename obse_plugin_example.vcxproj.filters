@@ -89,9 +89,6 @@
     <ClCompile Include="MainGameVarsPointer.cpp">
       <Filter>GlobalStructsEnum</Filter>
     </ClCompile>
-    <ClCompile Include="ThreadState.cpp">
-      <Filter>Threads</Filter>
-    </ClCompile>
     <ClCompile Include="ActivePlaylist.cpp" />
     <ClCompile Include="EMC2INISettings.cpp">
       <Filter>INI</Filter>
@@ -109,9 +106,6 @@
       <Filter>INI</Filter>
     </ClCompile>
     <ClCompile Include="OBSEInterfaces.cpp" />
-    <ClCompile Include="MusicType.cpp">
-      <Filter>GlobalStructsEnum</Filter>
-    </ClCompile>
     <ClCompile Include="MusicTimes.cpp">
       <Filter>MusicPlayer</Filter>
     </ClCompile>
@@ -197,9 +191,6 @@
     <ClInclude Include="ThreadRequest.h">
       <Filter>Threads</Filter>
     </ClInclude>
-    <ClInclude Include="ThreadState.h">
-      <Filter>Threads</Filter>
-    </ClInclude>
     <ClInclude Include="FadeThread.h">
       <Filter>Threads</Filter>
     </ClInclude>
@@ -259,6 +250,9 @@
       <Filter>utils</Filter>
     </ClInclude>
     <ClInclude Include="TimeManagement.h">
+      <Filter>utils</Filter>
+    </ClInclude>
+    <ClInclude Include="DebugMode.h">
       <Filter>utils</Filter>
     </ClInclude>
   </ItemGroup>

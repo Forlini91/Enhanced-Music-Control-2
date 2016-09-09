@@ -340,7 +340,7 @@ namespace SME {
 
 			if (Dynamic == false) {
 				StaticSettings.push_back (Setting);
-				StaticSettings.sort (SortComparator);
+				//StaticSettings.sort (SortComparator);
 			} else {
 				DynamicSettings.push_back (Setting);
 				DynamicSettings.sort (SortComparator);
@@ -466,6 +466,10 @@ namespace SME {
 			if (INIManager::DirectRead (Section, SectionData, sizeof (SectionData))) {
 				for (const char* Itr = SectionData; *Itr != '\0'; Itr += strlen (Itr) + 1) {
 					std::string Entry (Itr);
+					if (Entry.empty () || Entry.at (0) == ';') {
+						continue;
+					}
+
 					size_t Delimiter = Entry.find ("=");
 
 					if (Delimiter != std::string::npos) {

@@ -27,9 +27,12 @@ void EMC2INISettings::Initialize (const char *INIPath, void *Parameter) {
 	INIStream.close ();
 	INIStream.clear ();
 
+	//General
 	RegisterSetting (&kINIDelayTitleMusicEnd);
 	RegisterSetting (&kINIMaxNumMultipliers);
 	RegisterSetting (&kINIMaxNumPlaylists);
+
+	//Music player
 	RegisterSetting (&kINIMusicSpeed);
 	RegisterSetting (&kINITrackPauseMin);
 	RegisterSetting (&kINITrackPauseExtra);
@@ -39,16 +42,25 @@ void EMC2INISettings::Initialize (const char *INIPath, void *Parameter) {
 	RegisterSetting (&kINIBattleMusicEndDelayExtra);
 	RegisterSetting (&kINIPreviousTrackRemember);
 	RegisterSetting (&kINIPreviousTrackRememberBattle);
+	RegisterSetting (&kINIPreviousTrackRememberRatio);
+
+	//Fade
 	RegisterSetting (&kINIFadeOut);
 	RegisterSetting (&kINIFadeIn);
 	RegisterSetting (&kINIFadeInBattle);
 	RegisterSetting (&kINIFadeOutBattle);
+
+	//Notifications
 	RegisterSetting (&kINIPrintTrack);
 
 	if (CreateINI)
 		Save ();
 
 	PopulateFromSection ("General");
+	PopulateFromSection ("MusicPlayer");
+	PopulateFromSection ("Fade");
+	PopulateFromSection ("Notifications");
+
 }
 
 
@@ -98,9 +110,6 @@ void EMC2INISettings::applySettings () {
 	val = clamp (val, 0, 300);		//Up to 5 minutes delay
 	musicTimes.setExtraStopBattleDelay (val * 1000);
 
-	val = kINIPreviousTrackRememberRatio.GetData ().f;
-	previousTrackRememberRatio = clamp (val, 0, 1);			//From 0 to 100% of track duration
-
 	val = kINIPreviousTrackRemember.GetData ().f;
 	val = clamp (val, 0, 600);		//Up to 10 minutes
 	musicTimes.setMusicRememberTime (val * 1000);
@@ -108,6 +117,9 @@ void EMC2INISettings::applySettings () {
 	val = kINIPreviousTrackRememberBattle.GetData ().f;
 	val = clamp (val, 0, 600);		//Up to 10 minutes
 	musicTimes.setBattleMusicRememberTime (val * 1000);
+
+	val = kINIPreviousTrackRememberRatio.GetData ().f;
+	previousTrackRememberRatio = clamp (val, 0, 1);			//From 0 to 100% of track duration
 
 
 	musicTimes.recalculatePauseTime ();

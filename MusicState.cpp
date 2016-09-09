@@ -1,7 +1,7 @@
 #include "MusicState.h"
 
 #include "MusicTimes.h"
-
+#include "DebugMode.h"
 
 
 MusicState musicState;
@@ -69,33 +69,32 @@ SpecialMusicType MusicState::setSpecialType (SpecialMusicType newSpecialType) {
 
 
 
-MusicType MusicState::getCurrentMusicType (bool ignoreBattleDelay) {
+MusicType MusicState::getCurrentMusicType () {
 	if (worldType != MusicType::mtSpecial) {									//Not special (death/success)
 		if (eventType == MusicType::mtSpecial) {
 			return MusicType::mtSpecial;
-		} else if (ignoreBattleDelay) {
-			if (isInBattle()) {
-				return MusicType::mtBattle;
-			}
-		} else if (isBattleMusicPlaying ()) {
+		} else if (battleState >= 2) {
 			return MusicType::mtBattle;
 		}
 	}
 
 	if (checkOverride ()) {
-		return getOverrideType();
+		return overrideCurType;
 	} else {
-		return getWorldType ();
+		return worldType;
 	}
 }
 
 
 
 bool MusicState::updateMusicState (bool stopped) {
-	if (worldType < MusicType::mtNotKnown) {
-		lastWorldType = worldType;
-	} else if (lastWorldType != MusicType::mtNotKnown) {
-		_MESSAGE ("Restore world music type: %d -> %d", worldType, lastWorldType);
+	if (worldType < MusicType::mtBattle) {
+		if (lastWorldType != worldType) {
+			_EMCDEBUG ("%lld | MusicState >> Save world music type: %d -> %d", timeStamp, lastWorldType, worldType);
+			lastWorldType = worldType;
+		}
+	} else if (lastWorldType != MusicType::mtNotKnown && worldType > MusicType::mtNotKnown) {
+		_EMCDEBUG ("%lld | MusicState >> Restore world music type: %d (%u) -> %d", timeStamp, worldType, wrlType, lastWorldType);
 		worldType = lastWorldType;
 		eventType = MusicType::mtSpecial;
 		lastWorldType = MusicType::mtNotKnown;
@@ -106,7 +105,9 @@ bool MusicState::updateMusicState (bool stopped) {
 		case BattleState::bsNoBattle:		//Not in battle
 			if (isInBattle ()) {		//Battle is starting. Let's start the delay timer.
 				WaitForSingleObject (hMusicTimesMutex, INFINITE);
-					battleDelay = now + milliseconds (musicTimes.getStartBattleDelay ());
+					milliseconds startBattleDelay = milliseconds(musicTimes.getStartBattleDelay ());
+					battleDelay = now + startBattleDelay;
+					_MESSAGE ("%lld | MusicState >> Start battle delay: %lld + %lld  =>  %lld", timeStamp, timeStamp, startBattleDelay.count (), battleDelay.count ());
 					musicTimes.recalculateStartBattleDelay ();
 				ReleaseMutex (hMusicTimesMutex);
 				battleState = BattleState::bsStartBattle;
@@ -115,21 +116,27 @@ bool MusicState::updateMusicState (bool stopped) {
 		case BattleState::bsStartBattle:
 			if (!isInBattle ()) {		//Battle ended before delay passed. Return to NoBattle.
 				battleState = BattleState::bsNoBattle;
-			} else if (battleDelay >= now) {	//Delay passed. Let's rock!!
+				_MESSAGE ("%lld | MusicState >> Battle ended before start delay passed: %lld", timeStamp, battleDelay.count ());
+			} else if (battleDelay < now) {	//Delay passed. Let's rock!!
 				battleState = BattleState::bsBattle;
+				_MESSAGE ("%lld | MusicState >> Start battle delay passed: %lld", timeStamp, battleDelay.count ());
 			}
 			break;
 		case BattleState::bsEndBattle:
 			if (isInBattle ()) {		//Battle restarted before delay passed. Return to Battle.
 				battleState = BattleState::bsBattle;
-			} else if (battleDelay >= now) {	//Delay passed. Calm down music.
+				_MESSAGE ("%lld | MusicState >> Battle restarted before stop delay passed: %lld", timeStamp, battleDelay.count ());
+			} else if (battleDelay < now) {	//Delay passed. Calm down music.
 				battleState = BattleState::bsNoBattle;
+				_MESSAGE ("%lld | MusicState >> Stop battle delay passed: %lld", timeStamp, battleDelay.count ());
 			}
 			break;
 		case BattleState::bsBattle:		//In battle
 			if (!isInBattle ()) {		//Battle is ending. Let's start the delay timer.
 				WaitForSingleObject (hMusicTimesMutex, INFINITE);
-					battleDelay = now + milliseconds(musicTimes.getStopBattleDelay ());
+					milliseconds stopBattleDelay = milliseconds(musicTimes.getStopBattleDelay ());
+					battleDelay = now + stopBattleDelay;
+					_MESSAGE ("%lld | MusicState >> Stop battle delay: %lld + %lld  ==>  %lld", timeStamp, timeStamp, stopBattleDelay.count (), battleDelay.count ());
 					musicTimes.recalculateStopBattleDelay ();
 				ReleaseMutex (hMusicTimesMutex);
 				battleState = BattleState::bsEndBattle;
@@ -141,12 +148,15 @@ bool MusicState::updateMusicState (bool stopped) {
 	if (stopped) {
 		if (pauseTime == TIME_ZERO) {
 			WaitForSingleObject (hMusicTimesMutex, INFINITE);
-				pauseTime = now + milliseconds (musicTimes.getPauseTime ());
+				milliseconds pause = milliseconds(musicTimes.getPauseTime ());
+				pauseTime = now + pause;
+				_MESSAGE ("%lld | MusicState >> Pause between track: %lld + %lld  ==>  %lld", timeStamp, timeStamp, pause.count (), pauseTime.count ());
 				musicTimes.recalculatePauseTime ();
 			ReleaseMutex (hMusicTimesMutex);
 		}
-		return pauseTime < now;
+		return now < pauseTime;
 	} else if (pauseTime != TIME_ZERO) {
+		_MESSAGE ("%lld | MusicState >> Reset pause variables", timeStamp);
 		pauseTime = TIME_ZERO;
 	}
 	return false;
@@ -161,20 +171,20 @@ bool MusicState::isLocked () {
 
 
 MusicType MusicState::getOverrideType () {
-	return override;
+	return overrideCurType;
 }
 
 
 
 void MusicState::overrideType (MusicType musicType, bool lock) {
 	if (musicType == MusicType::mtNotKnown) {
-		override = MusicType::mtNotKnown;
-		overridePrev = MusicType::mtNotKnown;
+		overrideCurType = MusicType::mtNotKnown;
+		overridePrevType = MusicType::mtNotKnown;
 		overridden = false;
 		locked = false;
 	} else {
-		override = musicType;
-		overridePrev = worldType;
+		overrideCurType = musicType;
+		overridePrevType = worldType;
 		overridden = true;
 		locked = lock;
 	}
@@ -184,11 +194,12 @@ void MusicState::overrideType (MusicType musicType, bool lock) {
 
 bool MusicState::checkOverride () {
 	if (overridden) {
-		if (locked || worldType == overridePrev) {	//nothing changed
+		if (locked || worldType == overridePrevType) {	//nothing changed
 			return true;
 		} else if (worldType <= 255) {
 			overridden = false;
-			override = MusicType::mtNotKnown;
+			overrideCurType = MusicType::mtNotKnown;
+			_MESSAGE ("%lld | MusicState >> Cell changed -> soft override disabled");
 		}
 	}
 	return false;
@@ -217,4 +228,18 @@ bool MusicState::isInBattle () {
 
 bool MusicState::isBattleMusicPlaying () {
 	return battleState >= 2;
+}
+
+
+
+void MusicState::reloadBattleState () {
+	if (battleState >= 2) {
+		if (eventType != MusicType::mtBattle) {
+			battleState = BattleState::bsNoBattle;
+		}
+	} else {
+		if (eventType == MusicType::mtBattle) {
+			battleState = BattleState::bsBattle;
+		}
+	}
 }

@@ -6,7 +6,6 @@
 #include "MusicState.h"
 #include "MusicTimes.h"
 #include "MusicPlayer.h"
-#include "ThreadState.h"
 
 
 
@@ -80,10 +79,6 @@ void ThreadRequest::requestPlayCustomTrack (const string &trackPath) {
 
 
 void ThreadRequest::requestSetPlaylist (ActivePlaylist *aplToSwap, Playlist *playlist, bool afterThisTrack, float delay) {
-	WaitForSingleObject (hMusicStateMutex, INFINITE);
-		MusicType currentMusicType = musicState.getCurrentMusicType (true);
-	ReleaseMutex (hMusicStateMutex);
-
 	WaitForSingleObject (hMusicTimesMutex, INFINITE);
 		int fadeOut = musicTimes.getFadeOut ();
 		int fadeIn = musicTimes.getFadeIn ();

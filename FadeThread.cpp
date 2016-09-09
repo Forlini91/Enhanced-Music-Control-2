@@ -26,6 +26,8 @@ void FadeThread (void *voidMultiplier) {
 					} else if (mult->setValueLimit (mult->getValue () + step, mult->targetValue)) {
 						_MESSAGE ("Fade Thread >> Stop thread: target value reached");
 						mult->isFading = false;
+						ReleaseMutex (mult->hThread);
+						return;
 					}
 				ReleaseMutex (mult->hThread);
 			}

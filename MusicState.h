@@ -5,7 +5,6 @@
 
 
 
-
 enum BattleState {
 	bsNoBattle = 0,		//Not in battle
 	bsStartBattle,		//Battle just started, battle music still not playing
@@ -26,18 +25,19 @@ private:
 	SpecialMusicType specialType = SpecialMusicType::spNotKnown;	//The special music type playing.
 
 	MusicType lastWorldType = MusicType::mtNotKnown;	//Last valid world type. Let's keep it, should the level-up return an invalid worldType.
-	MusicType override = MusicType::mtNotKnown;			//What is the music type forced by override?
-	MusicType overridePrev = MusicType::mtNotKnown;		//What was the music type when the override was issued? If there's no lock, this allow us to detect when world music change and disable the override
+	MusicType overrideCurType = MusicType::mtNotKnown;			//What is the music type forced by override?
+	MusicType overridePrevType = MusicType::mtNotKnown;		//What was the music type when the override was issued? If there's no lock, this allow us to detect when world music change and disable the override
 
 	BattleState battleState = BattleState::bsNoBattle;
 	bool battleOverridde = false;			//If true, GetCurrentMusicType will not return Battle.
 	bool locked = false;
 
-	SystemTime battleDelay = TIME_ZERO;
-	SystemTime pauseTime = TIME_ZERO;
+	milliseconds battleDelay = TIME_ZERO;
+	milliseconds pauseTime = TIME_ZERO;
 
 public:
 
+	int wrlType = 0;
 
 	//Gets the current world music type, checking and eventually avoiding the post-level-up menu bug.
 	MusicType getWorldType () const;
@@ -66,7 +66,7 @@ public:
 	//Gets the current playing music type
 
 
-	MusicType getCurrentMusicType (bool ignoreBattleDelay);
+	MusicType getCurrentMusicType ();
 
 	//Update the music type, fixing the bug with the Success music and updating the battle delay and pause between tracks.
 	//Return true if the music is paused, false otherwise
@@ -86,6 +86,8 @@ public:
 	bool isInBattle ();
 
 	bool isBattleMusicPlaying ();
+
+	void reloadBattleState ();
 
 };
 

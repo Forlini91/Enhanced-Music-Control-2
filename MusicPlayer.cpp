@@ -3,7 +3,8 @@
 #include "Globals.h"
 #include "FilePath.h"
 #include <dshow.h>
-
+#include "IniData.h"
+#include "DebugMode.h"
 
 #define VOLUME_MULT 2000.0
 const float minVolume = pow (2, ABSOLUTE_MINIMUM_VOLUME / VOLUME_MULT);
@@ -85,7 +86,7 @@ bool MusicPlayer::initialize () {
 	if (isInitialized()) {		//Don't initialize again if already initialized.
 		return true;
 	} else if (initializeDShow (false)) {
-		_MESSAGE ("Music player initialized");
+		_MESSAGE ("Music player >> Initialized");
 		initialized = true;
 		return true;
 	} else {
@@ -141,16 +142,15 @@ bool MusicPlayer::isReady () const {
 bool MusicPlayer::queueTrack (const string &trackPath, LONGLONG position) {
 	if (isInitialized() && isReady()) {
 		if (trackPath.empty ()) {
-			_MESSAGE ("MusicPlayer >> No track available");
+			_MESSAGE ("%lld | MusicPlayer >> No track available", timeStamp);
 		} else if (!exists (trackPath)) {
-			_MESSAGE ("MusicPlayer >> Track can't be queued: it doesn't exists >> %s", trackPath.c_str ());
+			_MESSAGE ("%lld | MusicPlayer >> Track can't be queued: it doesn't exists >> %s", timeStamp, trackPath.c_str ());
 		} else if (isDirectory (trackPath)) {
-			_MESSAGE ("MusicPlayer >> Track can't be queued: it's a directory >> %s", trackPath.c_str ());
+			_MESSAGE ("%lld | MusicPlayer >> Track can't be queued: it's a directory >> %s", timeStamp, trackPath.c_str ());
 		} else if (!isExtensionSupported (trackPath)) {
-			_MESSAGE ("MusicPlayer >> Track can't be queued: unsupported extension >> %s", trackPath.c_str ());
+			_MESSAGE ("%lld | MusicPlayer >> Track can't be queued: unsupported extension >> %s", timeStamp, trackPath.c_str ());
 		} else {
-			double pos = position / ONE_SECOND;
-			_MESSAGE ("MusicPlayer >> Queue new track >> %s (position: %.2f)", trackPath.c_str(), pos);
+			_MESSAGE ("%lld | MusicPlayer >> Queue new track >> %s (position: %.2f)", timeStamp, trackPath.c_str (), position/ONE_SECOND);
 			queuedTrack = QueuedTrack (trackPath, position);
 			return true;
 		}
@@ -171,6 +171,7 @@ bool MusicPlayer::playQueuedTrack (FadeMethod newFadeMethod, int fadeOut, int fa
 		if (isStopped () || isPaused () || newFadeMethod == FadeMethod::fmNoFade || newFadeMethod == FadeMethod::fmFadeIn) {
 			return playTrack (newFadeMethod, fadeOut, fadeIn);
 		} else {	//Stop current track
+			_MESSAGE ("%lld | MusicPlayer >> Delayed play track >> Fade method: %d, FadeOut/In: %d/%d)", timeStamp, newFadeMethod, fadeOut, fadeIn);
 			state = PlayerState::psFadingOut;
 			task = PlayerTask::ptQueue;
 			fadeMethod = newFadeMethod;
@@ -193,7 +194,7 @@ const string& MusicPlayer::getTrack () const {
 
 
 LONGLONG MusicPlayer::getTrackPosition () const {
-	return hasPlayedOnce() ? trackDuration : 0;
+	return hasPlayedOnce() ? trackPosition : 0;
 }
 
 
@@ -260,23 +261,20 @@ bool MusicPlayer::setMaxMusicVolume (float fVolume) {
 
 double MusicPlayer::getMusicSpeed () const {
 	double speed;
-	if (isInitialized() && FAILED (pMediaSeeking->GetRate (&speed))) {
-		return -1;
+	if (isInitialized() && SUCCEEDED (pMediaSeeking->GetRate (&speed))) {
+		return speed;
 	}
-	return speed;
+	return -1;
 }
 
 
 
 bool MusicPlayer::setMusicSpeed (double speed) {
 	double prev = 0;
-	if (isInitialized () && FAILED (pMediaSeeking->GetRate (&prev))) {
-		return false;
-	}
-	if (prev != speed) {
-		if (FAILED (pMediaSeeking->SetRate (speed))) {
-			return false;
-		}
+	if (isInitialized ()
+			&& SUCCEEDED (pMediaSeeking->GetRate (&prev))
+			&& prev != speed
+			&& SUCCEEDED (pMediaSeeking->SetRate (speed))) {
 		return true;
 	}
 	return false;
@@ -392,12 +390,14 @@ void MusicPlayer::updatePlayer (int sleepTime) {
 		//1)  Checks state and performs actions as neccessary.
 		//2)  Checks for events from the player, mostly if the player has stopped.
 
+		if (state == PlayerState::psUninitialized) {
+			//Return, since there is nothing we can do
+			return;
+		}
+
 		//However, first, it will check to see if the play-back is stopped.
 		PlayerState currentState = checkState ();
-		if (currentState == PlayerState::psUninitialized) {
-			//Return, since there is nothing more to do.
-			return;
-		} else if (currentState != state) {
+		if (currentState != state) {		//REDUNDANT, but leave it for now...
 			//Clean up as needed.  If we, by chance, performed a ForceKill...
 			//Now, if the player stopped since the last time we did player stuff.
 			if (currentState == PlayerState::psStopped) {
@@ -406,46 +406,44 @@ void MusicPlayer::updatePlayer (int sleepTime) {
 				switch (state) {
 					case PlayerState::psFadingOut:
 						if (task != PlayerTask::ptPause) {
-							//Since we were in the middle of fading when the track stopped,
-							//there was probably something we needed to do.  Lets set the
-							//state to Faded so that we can handle it later.
+							//Since we were in the middle of fading when the track stopped, there was probably something we needed to do.
+							//Lets set the state to Faded so that we can handle it later.
 							state = PlayerState::psFadedOut;
 							fadeTotalSleepTime = 0;			//Reset the sleep time for the next fade.
 							pBasicAudio->put_Volume (ABSOLUTE_MINIMUM_VOLUME);
-							_MESSAGE ("MusicPlayer >> Switch state: FadingOut -> FadedOut. task: !Pause -> <MAINTAIN>");
+							_MESSAGE ("%lld | MusicPlayer >> Switch state: FadingOut -> FadedOut. task: !Pause -> FadedOut", timeStamp);
 						} else {
 							//Otherwise, there is nothing to pause anymore.
 							//Set to stopped instead.
-							state = currentState;			//Set to Stopped.
+							state = PlayerState::psStopped;			//Set to Stopped.
 							task = PlayerTask::ptNone;	//No longer any task.  Its stopped.
 							fadeTotalSleepTime = 0;		//Reset the sleep time for the next fade.
-							_MESSAGE ("MusicPlayer >> Switch state: FadingOut -> Stopped. task: Pause -> None");
+							_MESSAGE ("%lld | MusicPlayer >> Switch state: FadingOut -> Stopped. task: Pause -> None", timeStamp);
 						}
 						break;
 					case PlayerState::psFadingIn:
 						//Set volume to maximum as we no longer have to worry about fading.
-						state = currentState;
+						state = PlayerState::psStopped;
 						task = PlayerTask::ptNone;
 						fadeTotalSleepTime = 0;			//Reset the sleep time for the next fade.
 						pBasicAudio->put_Volume (maximumVolume);
-						_MESSAGE ("MusicPlayer >> Switch state: FadingIn -> Stopped. task: Any -> None");
+						_MESSAGE ("%lld | MusicPlayer >> Switch state: FadingIn -> Stopped. task: Any -> None", timeStamp);
 						break;
 					case PlayerState::psFadedOut:
 						//There is one thing we should look out for in this case.
-						//If we faded and wanted to pause...  Well, there is
-						//nothing to pause anymore.  Lets handle it so it is
-						//stopped instead.
+						//If we faded and wanted to pause...  Well, there is nothing to pause anymore. 
+						//Lets handle it so it is stopped instead.
 						if (task == PlayerTask::ptPause) {
-							state = currentState;			//Set to Stopped.
+							state = PlayerState::psStopped;			//Set to Stopped.
 							task = PlayerTask::ptNone;		//No longer any task.  Its stopped.
-							_MESSAGE ("MusicPlayer >> Switch status: FadedOut -> Stopped. task: Pause -> None");
+							_MESSAGE ("%lld | MusicPlayer >> Switch status: FadedOut -> Stopped. task: Pause -> None", timeStamp);
 						}
 						break;
 					default:
 						//Nothing else, we'll set the state accordingly.
-						state = currentState;
+						state = PlayerState::psStopped;
 						task = PlayerTask::ptNone;
-						_MESSAGE ("MusicPlayer >> Switch status: Any -> Stopped. task: Any -> None");
+						_MESSAGE ("%lld | MusicPlayer >> Switch status: Any -> Stopped. task: Any -> None", timeStamp);
 						break;
 				}
 			}
@@ -489,7 +487,7 @@ bool MusicPlayer::doFading (int sleepTime) {
 	if (state == PlayerState::psFadingIn) {
 		percentComplete = (fadeInPeriod != 0 ? float (fadeTotalSleepTime) / fadeInPeriod : 1.0);
 		if (percentComplete >= 1.0) {
-			_MESSAGE ("MusicPlayer >> Switch status: FadingIn -> FadedIn. task: Unchanged.");
+			_MESSAGE ("%lld | MusicPlayer >> Switch status: FadingIn -> FadedIn. task: Unchanged", timeStamp);
 			state = PlayerState::psFadedIn;					//Exit from fading.
 			fadeTotalSleepTime = 0;
 			hr = pBasicAudio->put_Volume (maximumVolume);	//Set the volume to maximumVolume
@@ -501,7 +499,7 @@ bool MusicPlayer::doFading (int sleepTime) {
 	} else { //if (state == PlayerState::psFadingOut) {
 		percentComplete = (fadeOutPeriod ? float (fadeTotalSleepTime) / fadeOutPeriod : 1.0);
 		if (percentComplete >= 1.0) {
-			_MESSAGE ("MusicPlayer >> Switch status: FadingOut -> FadedOut. task: Unchanged");
+			_MESSAGE ("%lld | MusicPlayer >> Switch status: FadingOut -> FadedOut. task: Unchanged", timeStamp);
 			state = PlayerState::psFadedOut;	//Exit from fading.
 			fadeTotalSleepTime = 0;
 			hr = pBasicAudio->put_Volume (ABSOLUTE_MINIMUM_VOLUME);		//Set the volume to ABSOLUTE_MINIMUM_VOLUME
@@ -513,9 +511,9 @@ bool MusicPlayer::doFading (int sleepTime) {
 	}
 
 	switch (hr) {
-		case E_INVALIDARG: _MESSAGE ("MusicPlayer >> DesiredVolume was outside of the range -10000 to 0."); break;
-		case E_FAIL: _MESSAGE ("MusicPlayer >> Failed to alter the volume.  Underlying device suffered an error."); break;
-		case E_NOTIMPL: _MESSAGE ("MusicPlayer >> Filter graph does not support volume manipulations via this interface."); break;
+		case E_INVALIDARG: _MESSAGE ("%lld | MusicPlayer >> DesiredVolume was outside of the range -10000 to 0.", timeStamp); break;
+		case E_FAIL: _MESSAGE ("%lld | MusicPlayer >> Failed to alter the volume. Underlying device suffered an error.", timeStamp); break;
+		case E_NOTIMPL: _MESSAGE ("%lld | MusicPlayer >> Filter graph does not support volume manipulations via this interface.", timeStamp); break;
 	}
 	return percentComplete >= 1.0;
 }
@@ -528,7 +526,7 @@ bool MusicPlayer::doTask () {
 			//Applies to Queue, Resume and Restart.
 			state = PlayerState::psPlaying;
 			task = PlayerTask::ptNone;
-			_MESSAGE ("MusicPlayer >> Switch status: FadingIn -> Playing. task: Any -> None");
+			_MESSAGE ("%lld | MusicPlayer >> Switch status: FadingIn -> Playing. task: Any -> None", timeStamp);
 			break;
 		case PlayerState::psFadedOut:
 			//Applies to Queue, Position, Pause, Restart, Stop.
@@ -545,20 +543,20 @@ bool MusicPlayer::doTask () {
 					pMediaControl->Run ();
 					state = PlayerState::psFadingIn;
 					task = PlayerTask::ptNone;
-					_MESSAGE ("MusicPlayer >> Switch status: FadedOut -> FadingIn. task: Restart -> None");
+					_MESSAGE ("%lld | MusicPlayer >> Switch status: FadedOut -> FadingIn. task: Restart -> None", timeStamp);
 					break;
 				case PlayerTask::ptPause:
 					//Now that we have faded out, we can pause the track.
 					pMediaControl->Pause ();
 					state = PlayerState::psPaused;
 					task = PlayerTask::ptNone;
-					_MESSAGE ("MusicPlayer >> Switch status: FadedOut -> Paused. task: Pause -> None");
+					_MESSAGE ("%lld | MusicPlayer >> Switch status: FadedOut -> Paused. task: Pause -> None", timeStamp);
 					break;
 				case PlayerTask::ptStop:
 					pMediaControl->Stop ();
 					state = PlayerState::psStopped;
 					task = PlayerTask::ptNone;
-					_MESSAGE ("MusicPlayer >> Switch status: FadedOut -> Stopped. task: Stopped -> None");
+					_MESSAGE ("%lld | MusicPlayer >> Switch status: FadedOut -> Stopped. task: Stopped -> None", timeStamp);
 					break;
 				case PlayerTask::ptPosition:
 					//Now we can change the track position.
@@ -569,7 +567,7 @@ bool MusicPlayer::doTask () {
 					newTrackPosition = 0;
 					state = PlayerState::psFadingIn;
 					task = PlayerTask::ptNone;
-					_MESSAGE ("MusicPlayer >> Switch status: FadedOut -> FadingIn. task: Position -> None");
+					_MESSAGE ("%lld | MusicPlayer >> Switch status: FadedOut -> FadingIn. task: Position -> None", timeStamp);
 					break;
 			}
 	}
@@ -584,7 +582,11 @@ PlayerState MusicPlayer::checkState () {
 	while (SUCCEEDED (pMediaEventEx->GetEvent (&evCode, &param1, &param2, 0))) {
 		// We process only the EC_COMPLETE message which is sent when the media is finished playing.
 		switch (evCode) {
-			case EC_COMPLETE: retVal = PlayerState::psStopped;	//Set state to Stopped when finished playing.
+			case EC_COMPLETE:
+				if (retVal != PlayerState::psStopped) {
+					_MESSAGE ("%lld | MusicPlayer >> End of the track", timeStamp);
+				}
+				retVal = PlayerState::psStopped;	//Set state to Stopped when finished playing.
 		}
 	}
 	return retVal;
@@ -601,16 +603,16 @@ bool MusicPlayer::playTrack (FadeMethod newFadeMethod, int fadeOut, int fadeIn) 
 	string queuedTrackPath;
 	LONGLONG queuedTrackPosition;
 	if (!queuedTrack.get (&queuedTrackPath, &queuedTrackPosition)) {
-		_MESSAGE ("MusicPlayer >> No queued track");
+		_MESSAGE ("%lld | MusicPlayer >> No queued track", timeStamp);
 		return false;
 	}
 
-	_MESSAGE ("MusicPlayer >> Play track >> \"%s\" (fade Out/In: %f/%f)", queuedTrackPath.c_str (), fadeOut, fadeIn);
+	_MESSAGE ("%lld | MusicPlayer >> Play track >> \"%s\" (fade Out/In: %d/%d)", timeStamp, queuedTrackPath.c_str (), fadeOut, fadeIn);
 	size_t length = 0;
 	WCHAR wFileName[MAX_PATH];
 	mbstowcs_s (&length, wFileName, queuedTrackPath.c_str (), MAX_PATH);	//Convert the filepath to wide characters.
 	if (FAILED (pGraphBuilder->RenderFile (wFileName, nullptr))) {	//Create the filter graph.
-		_MESSAGE ("MusicPlayer >> Failed to create the DShow Graph to render the file.");
+		_MESSAGE ("%lld | MusicPlayer >> Failed to create the DShow Graph to render the file.", timeStamp);
 		state = PlayerState::psStopped;
 		task = PlayerTask::ptNone;
 		return false;
@@ -618,19 +620,22 @@ bool MusicPlayer::playTrack (FadeMethod newFadeMethod, int fadeOut, int fadeIn) 
 
 	trackPath = queuedTrackPath;
 	if (FAILED (pMediaSeeking->GetDuration (&trackDuration))) {
-		_MESSAGE ("MusicPlayer >> Failed to get the track duration");
+		_MESSAGE ("%lld | MusicPlayer >> Failed to get the track duration", timeStamp);
 		state = PlayerState::psStopped;
 		task = PlayerTask::ptNone;
 		return false;
 	}
-	if (trackDuration <= queuedTrackPosition) {
+	
+	_MESSAGE ("%lld | MusicPlayer >> Get track position: %.2f/%.2f", timeStamp, (queuedTrackPosition / ONE_SECOND), (trackDuration / ONE_SECOND));
+	if (queuedTrackPosition <= trackDuration) {
 		trackPosition = queuedTrackPosition;
 	} else {
+		_EMCDEBUG ("%lld | MusicPlayer >> Track position is greater than duration. Start from beginning.", timeStamp);
 		trackPosition = 0;
 	}
 	if (FAILED (pMediaSeeking->SetPositions (&trackPosition, AM_SEEKING_AbsolutePositioning, nullptr, AM_SEEKING_NoPositioning))) {
 		if (trackDuration > 0) {	//Don't care if 0
-			_MESSAGE ("MusicPlayer >> Failed to set the track position");
+			_MESSAGE ("%lld | MusicPlayer >> Failed to set the track position", timeStamp);
 			state = PlayerState::psStopped;
 			task = PlayerTask::ptNone;
 			return false;
@@ -655,12 +660,15 @@ bool MusicPlayer::playTrack (FadeMethod newFadeMethod, int fadeOut, int fadeIn) 
 	}
 
 	if (FAILED (pMediaControl->Run ())) {
-		_MESSAGE ("MusicPlayer >> Failed to run music player");
+		_MESSAGE ("%lld | MusicPlayer >> Failed to run music player", timeStamp);
 		state = PlayerState::psStopped;
 		task = PlayerTask::ptNone;
 		return false;
 	}
 
+	if (printNewTrack) {
+		Console_Print ("Now playing track > %s", trackPath.c_str ());
+	}
 	playedOnce = true;
 	return true;
 }
@@ -673,11 +681,11 @@ bool MusicPlayer::initializeDShow (bool reset) {
 	HRESULT hr = CoCreateInstance (CLSID_FilterGraph, nullptr, CLSCTX_INPROC_SERVER, IID_IGraphBuilder, (void**)&pGraphBuilder);
 	if (FAILED (hr) || !pGraphBuilder) {	//Check to see that the GraphBuilder is available.
 		switch (hr) {			//There was a problem.  Fail.
-			case REGDB_E_CLASSNOTREG:	_MESSAGE ("MusicPlayer >> Failed to create an instance of IGraphBuilder: class was not registered"); break;
-			case CLASS_E_NOAGGREGATION:	_MESSAGE ("MusicPlayer >> Failed to create an instance of IGraphBuilder: this class cannot be created as part of an aggregate"); break;
-			case E_NOINTERFACE:			_MESSAGE ("MusicPlayer >> Failed to create an instance of IGraphBuilder: there was a problem with the interface"); break;
-			case S_OK:					_MESSAGE ("MusicPlayer >> An instance of the interface was, supposedly, created... but its null, which means it wasn't"); break;
-			default:					_MESSAGE ("MusicPlayer >> An unexpected error was thrown during the creation of the interface: the pointer, for some reason, is just null"); break;
+			case REGDB_E_CLASSNOTREG:	_MESSAGE ("%lld | MusicPlayer >> Failed to create an instance of IGraphBuilder: class was not registered", timeStamp); break;
+			case CLASS_E_NOAGGREGATION:	_MESSAGE ("%lld | MusicPlayer >> Failed to create an instance of IGraphBuilder: this class cannot be created as part of an aggregate", timeStamp); break;
+			case E_NOINTERFACE:			_MESSAGE ("%lld | MusicPlayer >> Failed to create an instance of IGraphBuilder: there was a problem with the interface", timeStamp); break;
+			case S_OK:					_MESSAGE ("%lld | MusicPlayer >> An instance of the interface was, supposedly, created... but its null, which means it wasn't", timeStamp); break;
+			default:					_MESSAGE ("%lld | MusicPlayer >> An unexpected error was thrown during the creation of the interface: the pointer, for some reason, is just null", timeStamp); break;
 		}
 		if (reset) forceKill ();
 		return false;
@@ -687,28 +695,28 @@ bool MusicPlayer::initializeDShow (bool reset) {
 	//Now, get the other instances we require from the GraphBuilder.
 	hr = pGraphBuilder->QueryInterface (IID_IMediaControl, (void **)&pMediaControl);
 	if (FAILED (hr) || !pMediaControl) {
-		_MESSAGE ("MusicPlayer >> Failed to obtain Media Control interface from pGraphBuilder");
+		_MESSAGE ("%lld | MusicPlayer >> Failed to obtain Media Control interface from pGraphBuilder", timeStamp);
 		if (reset) forceKill ();
 		return false;
 	}
 
 	hr = pGraphBuilder->QueryInterface (IID_IMediaSeeking, (void**)&pMediaSeeking);
 	if (FAILED (hr) || !pMediaSeeking) {
-		_MESSAGE ("MusicPlayer >> Failed to obtain Media Seeking interface from pGraphBuilder");
+		_MESSAGE ("%lld | MusicPlayer >> Failed to obtain Media Seeking interface from pGraphBuilder", timeStamp);
 		if (reset) forceKill ();
 		return false;
 	}
 
 	hr = pGraphBuilder->QueryInterface (IID_IMediaEventEx, (void**)&pMediaEventEx);
 	if (FAILED (hr) || !pMediaEventEx) {
-		_MESSAGE ("MusicPlayer >> Failed to obtain Media Event Ex interface from pGraphBuilder");
+		_MESSAGE ("%lld | MusicPlayer >> Failed to obtain Media Event Ex interface from pGraphBuilder", timeStamp);
 		if (reset) forceKill ();
 		return false;
 	}
 
 	hr = pGraphBuilder->QueryInterface (IID_IBasicAudio, (void**)&pBasicAudio);
 	if (FAILED (hr) || !pBasicAudio) {
-		_MESSAGE ("MusicPlayer >> Failed to obtain Basic Audio interface from pGraphBuilder");
+		_MESSAGE ("%lld | MusicPlayer >> Failed to obtain Basic Audio interface from pGraphBuilder", timeStamp);
 		if (reset) forceKill ();
 		return false;
 	}
@@ -741,7 +749,7 @@ bool MusicPlayer::resetDShow () {
 
 
 void MusicPlayer::forceKill () {
-	_MESSAGE ("MusicPlayer >> Force killed!");
+	_MESSAGE ("%lld | MusicPlayer >> Force killed!", timeStamp);
 	initialized = false;	//Uninitialize the class. This will make sure no functions can execute.
 	if (pMediaControl) {
 		pMediaControl->Stop ();
